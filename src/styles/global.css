@@ -121,7 +121,7 @@ input { font-family: var(--font); }
   transition: all .15s;
 }
 .nav-link:hover  { color: var(--text-primary); background: var(--bg-raised); }
-.nav-link.active { color: var(--cb-blue); background: var(--cb-blue-light); font-weight: 600; }
+.nav-link.active { color: var(--cb-blue); background: transparent; font-weight: 700; border-bottom: 2px solid var(--cb-blue); border-radius: 0; padding-bottom: 5px; }
 .nav-play-wrap { position: relative; }
 .nav-battle-btn {
   padding: 8px 16px; border-radius: var(--radius-sm);

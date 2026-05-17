@@ -555,19 +555,21 @@ input { font-family: var(--font); }
 .config-inline label { margin: 0; }
 .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .diff-btn {
-  padding: 11px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-raised); transition: all .15s;
+  padding: 14px 11px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  background: var(--bg-raised); transition: all .15s; text-align: center;
 }
-.diff-btn:hover       { color: var(--text-primary); border-color: var(--border-dark); }
-.diff-btn.active      { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; }
+.diff-btn:hover       { color: var(--text-primary); border-color: var(--border-dark); background: var(--bg-card); }
+.diff-btn.active      { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; box-shadow: 0 4px 12px rgba(0,82,255,.25); }
+.tc-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .tc-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .tc-btn {
-  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 20px;
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-raised); transition: all .15s;
+  padding: 9px 18px; border: 1.5px solid var(--border); border-radius: 20px;
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  background: var(--bg-card); transition: all .15s; flex-shrink: 0;
 }
-.tc-btn.active { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; }
+.tc-btn:hover  { border-color: var(--cb-blue); color: var(--cb-blue); background: var(--cb-blue-light); }
+.tc-btn.active { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; box-shadow: 0 4px 12px rgba(0,82,255,.25); }
 .sound-toggle {
   padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--border);
   font-size: 13px; font-weight: 600; background: var(--bg-raised); color: var(--text-secondary); transition: all .15s;

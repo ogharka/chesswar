@@ -106,7 +106,7 @@ export default function Navbar() {
                 <Link className="wd-item" to="/profile" onClick={() => setMenuOpen(false)}>Barracks</Link>
                 <div className="wd-div" />
                 <button className="wd-item wd-out" onClick={() => { disconnect(); setMenuOpen(false); }}>
-                  Retreat (Disconnect)
+                  Disconnect
                 </button>
               </div>
             )}

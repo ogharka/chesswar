@@ -76,7 +76,7 @@ input { font-family: var(--font); }
   min-height: 100vh; background: var(--cb-blue);
 }
 .boot-inner { text-align: center; }
-.boot-logo { font-size: 56px; margin-bottom: 16px; }
+.boot-logo { font-size: 52px; margin-bottom: 16px; letter-spacing: -8px; }
 .boot-inner h1 {
   font-size: 36px; font-weight: 800; color: #fff;
   letter-spacing: -0.5px; margin-bottom: 8px;
@@ -111,7 +111,7 @@ input { font-family: var(--font); }
   height: 58px; display: flex; align-items: center; gap: 8px;
 }
 .navbar-brand { display: flex; align-items: center; gap: 10px; margin-right: 16px; }
-.brand-icon { font-size: 20px; }
+.brand-icon { font-size: 18px; letter-spacing: -4px; margin-right: 4px; }
 .brand-text { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
 .brand-text span { color: var(--cb-blue); }
 .navbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; }
@@ -211,7 +211,7 @@ input { font-family: var(--font); }
   box-shadow: 0 32px 80px rgba(0,0,0,0.3);
 }
 .connect-logo { text-align: center; margin-bottom: 28px; }
-.connect-icon { font-size: 48px; margin-bottom: 12px; }
+.connect-icon { font-size: 44px; margin-bottom: 12px; letter-spacing: -6px; }
 .connect-logo h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); }
 .connect-logo h1 span { color: var(--cb-blue); }
 .connect-logo p { color: var(--text-secondary); font-size: 15px; margin-top: 6px; }
@@ -308,7 +308,7 @@ input { font-family: var(--font); }
 .bc-bot:hover  { border-color: var(--cb-blue); }
 .bc-bet:hover  { border-color: var(--gold); }
 .bc-tour:hover { border-color: var(--purple); }
-.bc-icon { font-size: 24px; margin-bottom: 6px; }
+.bc-icon { font-size: 28px; margin-bottom: 6px; color: var(--cb-blue); opacity: 0.8; }
 .battle-card strong { font-size: 15px; font-weight: 700; color: var(--text-primary); }
 .battle-card span   { font-size: 12px; color: var(--text-muted); }
 .bc-pts {
@@ -847,7 +847,7 @@ input { font-family: var(--font); }
   box-shadow: var(--shadow-lg);
 }
 .us-header { text-align: center; margin-bottom: 28px; }
-.us-logo   { font-size: 44px; margin-bottom: 12px; }
+.us-logo   { font-size: 44px; margin-bottom: 12px; letter-spacing: -6px; color: var(--cb-blue); }
 .us-header h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; letter-spacing: -0.3px; }
 .us-header p  { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
 .us-section { margin-bottom: 20px; }

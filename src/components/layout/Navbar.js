@@ -44,16 +44,16 @@ export default function Navbar() {
   ];
 
   const battles = [
-    { mode: 'bot', label: '🤖 vs AI',      sub: 'Train against the machine'  },
-    { mode: 'pvp', label: '⚔️ vs Player',  sub: 'Online PvP battle'          },
-    { mode: 'bet', label: '💰 Bet Battle',  sub: 'USDC wager · 5× points'    },
+    { mode: 'bot', label: '◈ vs AI',      sub: 'Train against the machine'  },
+    { mode: 'pvp', label: 'vs Player',  sub: 'Online PvP battle'          },
+    { mode: 'bet', label: 'Bet Battle',  sub: 'USDC wager · 5× points'    },
   ];
 
   return (
     <header className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="navbar-brand">
-          <span className="brand-icon">⚔️</span>
+          <span className="brand-icon">♟♙</span>
           <span className="brand-text">Chess<span>War</span></span>
         </Link>
 
@@ -65,7 +65,7 @@ export default function Navbar() {
           ))}
           <div className="nav-play-wrap">
             <button className="nav-battle-btn" onClick={() => setPlayOpen((p) => !p)}>
-              ⚔️ Battle ▾
+              Battle ▾
             </button>
             {playOpen && (
               <div className="nav-play-dropdown" onMouseLeave={() => setPlayOpen(false)}>
@@ -83,10 +83,10 @@ export default function Navbar() {
 
         <div className="navbar-right">
           {usdcBal !== null && (
-            <div className="usdc-chip">💵 <span>{usdcBal}</span></div>
+            <div className="usdc-chip">$ <span>{usdcBal}</span></div>
           )}
           <div className="points-chip">
-            <span>⭐</span>
+            <span>★</span>
             <span className="pc-val">{points.toLocaleString()}</span>
             {nftBoost > 1 && <span className="pc-boost">{nftBoost}×</span>}
           </div>

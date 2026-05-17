@@ -265,14 +265,14 @@ export default function GamePage() {
   };
 
   const rematch = () => { reset(); setStarted(true); };
-  const resign  = () => { if (!started || over) return; if (window.confirm('Retreat from battle?')) endGame('b', 'resignation'); };
+  const resign  = () => { if (!started || over) return; if (window.confirm('Resign this game?')) endGame('b', 'resignation'); };
 
   /* ── Config screen ── */
   if (!configured) {
     return (
       <div className="config-screen">
         <div className="config-card">
-          <button className="config-back" onClick={() => navigate('/')}>← Retreat</button>
+          <button className="config-back" onClick={() => navigate('/')}>← Back</button>
           <h2 className="config-title">
             {isBot ? '◈ Battle vs AI' : isBet ? 'Bet Battle' : 'PvP Battle'}
           </h2>

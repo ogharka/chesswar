@@ -98,10 +98,10 @@ export default function Dashboard() {
               >
                 <span className="bc-piece">{m.piece}</span>
                 <div className="bc-body">
-                  <strong>{m.title}</strong>
-                  <span>{m.sub}</span>
+                  <strong className="bc-title">{m.title}</strong>
+                  <span className="bc-sub">{m.sub}</span>
+                  <span className={`bc-tag ${m.tagCls}`}>{m.tag}</span>
                 </div>
-                <div className={`bc-tag ${m.tagCls}`}>{m.tag}</div>
               </button>
             ))}
           </div>

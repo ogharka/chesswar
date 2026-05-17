@@ -53,7 +53,7 @@ export default function Navbar() {
   }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navLinks = [
-    { path: '/',            label: 'Command'     },
+    { path: '/',            label: 'Play'        },
     { path: '/tournament',  label: 'Tournaments' },
     { path: '/leaderboard', label: 'War Board'   },
     { path: '/profile',     label: 'Barracks'    },

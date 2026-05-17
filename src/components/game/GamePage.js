@@ -161,7 +161,7 @@ export default function GamePage() {
     addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isBot ? `AI (${botDiff})` : 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
     if (won) sfx('win'); else if (!draw) sfx('loss');
-    toast(won ? '⚔️ Victory!' : draw ? '🤝 Draw!' : '💀 Defeated!', { duration: 3000 });
+    toast(won ? 'Victory!' : draw ? '= Draw!' : '✕ Defeated!', { duration: 3000 });
   }, [addPoints, addGameResult, betAmt, botDiff, isBet, isBot, mode, profile, sfx, updateProfile]);
 
   /* apply move */
@@ -274,7 +274,7 @@ export default function GamePage() {
         <div className="config-card">
           <button className="config-back" onClick={() => navigate('/')}>← Retreat</button>
           <h2 className="config-title">
-            {isBot ? '🤖 Battle vs AI' : isBet ? '💰 Bet Battle' : '⚔️ PvP Battle'}
+            {isBot ? '◈ Battle vs AI' : isBet ? 'Bet Battle' : 'PvP Battle'}
           </h2>
 
           {isBot && (
@@ -329,13 +329,13 @@ export default function GamePage() {
                 <div className="bs-row"><span>You wager</span><strong>{parseFloat(betAmt) || 0} USDC</strong></div>
                 <div className="bs-row"><span>If you win</span><strong className="green">+{((parseFloat(betAmt) || 0) * 2 * 0.98).toFixed(2)} USDC</strong></div>
                 <div className="bs-row"><span>Platform fee</span><strong>2%</strong></div>
-                <div className="bs-row"><span>Point boost</span><strong className="fire">🔥 5× all points</strong></div>
+                <div className="bs-row"><span>Point boost</span><strong className="fire">× 5× all points</strong></div>
               </div>
             </div>
           )}
 
           <button className="config-start-btn" onClick={startGame}>
-            {isBet ? `⚔️ Start Bet Battle · ${parseFloat(betAmt) || 0} USDC` : '⚔️ Enter Battle'}
+            {isBet ? `Start Bet Battle · ${parseFloat(betAmt) || 0} USDC` : 'Enter Battle'}
           </button>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function GamePage() {
       {/* Opponent */}
       <div className="player-row">
         <div className="player-info">
-          <div className="pi-av">{isBot ? '🤖' : '👤'}</div>
+          <div className="pi-av">{isBot ? '◈' : '👤'}</div>
           <div className="pi-det">
             <span className="pi-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</span>
             {thinking && <span className="pi-thinking">calculating…</span>}
@@ -378,7 +378,7 @@ export default function GamePage() {
         <div className="game-sidebar">
           {isBet && (
             <div className="bet-active-pill">
-              💰 {betAmt} USDC · <span className="bap-boost">🔥 5× War Points</span>
+              ◎ {betAmt} USDC · <span className="bap-boost">× 5× War Points</span>
             </div>
           )}
           <MoveList moves={moves} onPGN={exportPGN} />
@@ -398,7 +398,7 @@ export default function GamePage() {
           <div className="pi-caps">{capW.map((p, i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           <div className="pi-det">
             <span className="pi-name">You (White)</span>
-            <span className="pi-sub">{nftBoost}× boost{isBet ? ' · 🔥 5×Bet' : ''}</span>
+            <span className="pi-sub">{nftBoost}× boost{isBet ? ' · × 5×Bet' : ''}</span>
           </div>
           <div className="pi-av">♙</div>
         </div>
@@ -412,7 +412,7 @@ export default function GamePage() {
           <div className="go-modal">
             <div className={`go-banner ${over.winner === 'w' ? 'go-win' : over.winner === 'd' ? 'go-draw' : 'go-loss'}`}>
               <div className="go-title">
-                {over.winner === 'w' ? '⚔️ Victory!' : over.winner === 'd' ? '🤝 Draw' : '💀 Defeated'}
+                {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? '= Draw' : '✕ Defeated'}
               </div>
               <div className="go-reason">
                 {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate — enemy king falls!' : 'Your king has fallen')}
@@ -432,7 +432,7 @@ export default function GamePage() {
                   </strong>
                 </div>
               )}
-              {isBet && <div className="go-row"><span>Bet boost</span><strong className="fire">🔥 5× applied</strong></div>}
+              {isBet && <div className="go-row"><span>Bet boost</span><strong className="fire">× 5× applied</strong></div>}
             </div>
             <div className="go-actions">
               <button className="go-btn go-rematch" onClick={rematch}>🔄 Rematch</button>

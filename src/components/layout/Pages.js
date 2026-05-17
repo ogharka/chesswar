@@ -20,14 +20,14 @@ export function TournamentPage() {
     setJoining(t.id);
     await new Promise((r) => setTimeout(r, 1500));
     joinTournament(t.id);
-    toast.success(`⚔️ Enlisted in "${t.name}"! 5 USDC deducted`);
+    toast.success(`Enlisted in "${t.name}"! 5 USDC deducted`);
     setJoining(null);
   };
 
   return (
     <div className="page-wrap">
       <div className="page-header">
-        <h1>🏆 War Tournaments</h1>
+        <h1>War Tournaments</h1>
         <p>Entry: <strong>5 USDC</strong> · All prizes in USDC · Smart contract escrow</p>
       </div>
       <div className="tourney-grid">
@@ -39,7 +39,7 @@ export function TournamentPage() {
               <div className="tc-top">
                 <div>
                   <h3 className="tc-name">{t.name}</h3>
-                  <span className={`tc-status ${t.status}`}>{t.status === 'full' ? '🔴 Full' : '🟢 Open'}</span>
+                  <span className={`tc-status ${t.status}`}>{t.status === 'full' ? 'Full' : 'Open'}</span>
                 </div>
                 <div className="tc-prize-badge">{t.prize} USDC</div>
               </div>
@@ -56,7 +56,7 @@ export function TournamentPage() {
               <div className="tc-prizes">🥇 {t.prizes[0]} · 🥈 {t.prizes[1]} · 🥉 {t.prizes[2]} USDC</div>
               <div className="tc-foot">
                 {joined ? (
-                  <div className="tc-joined-badge">⚔️ Enlisted!</div>
+                  <div className="tc-joined-badge">✓ Enlisted</div>
                 ) : (
                   <button className={`tc-join-btn ${t.status === 'full' ? 'tc-full' : ''}`}
                     onClick={() => join(t)} disabled={joining === t.id || t.status === 'full'}>
@@ -69,7 +69,7 @@ export function TournamentPage() {
         })}
       </div>
       <div className="tourney-rules">
-        <h3>⚔️ Rules of War</h3>
+        <h3>Rules</h3>
         <ul>
           <li>5 USDC entry locked in Base smart contract</li>
           <li>Prize: 50% · 30% · 20% to top 3 warriors</li>
@@ -101,12 +101,12 @@ export function LeaderboardPage() {
   return (
     <div className="page-wrap">
       <div className="page-header">
-        <h1>⚔️ War Board</h1>
+        <h1>War Board</h1>
         <p>Top warriors earn the biggest <strong>CWAR token airdrop</strong></p>
       </div>
       <div className="airdrop-banner">
         <div className="ab-left">
-          <span className="ab-icon">🪂</span>
+          <span className="ab-icon">♟</span>
           <div>
             <strong>CWAR Token Launch · 1,000,000,000 Supply</strong>
             <p>Points you earn now = your airdrop allocation. Keep fighting.</p>
@@ -152,10 +152,10 @@ export function LeaderboardPage() {
 
 // ── Profile ───────────────────────────────────────────────────────────────
 const NFT_TIERS = [
-  { tier: 1, name: 'Soldier',   sym: '⚔️',  price: '0.005 ETH', boost: '2×', color: '#81b64c', desc: 'Entry rank. Start your conquest.' },
-  { tier: 2, name: 'Knight',    sym: '🗡️',  price: '0.01 ETH',  boost: '3×', color: '#4a9eff', desc: 'Proven warrior. Strong multiplier.' },
-  { tier: 3, name: 'Commander', sym: '🛡️',  price: '0.025 ETH', boost: '4×', color: '#c97af0', desc: 'Battle-hardened. Dominate ranks.' },
-  { tier: 4, name: 'Warlord',   sym: '👑',  price: '0.05 ETH',  boost: '5×', color: '#c9a84c', desc: 'Supreme rank. Maximum airdrop share.' },
+  { tier: 1, name: 'Soldier',   sym: '♙',  price: '0.005 ETH', boost: '2×', color: '#81b64c', desc: 'Entry rank. Start your conquest.' },
+  { tier: 2, name: 'Knight',    sym: '♞',  price: '0.01 ETH',  boost: '3×', color: '#4a9eff', desc: 'Proven warrior. Strong multiplier.' },
+  { tier: 3, name: 'Commander', sym: '♝',  price: '0.025 ETH', boost: '4×', color: '#c97af0', desc: 'Battle-hardened. Dominate ranks.' },
+  { tier: 4, name: 'Warlord',   sym: '♛',  price: '0.05 ETH',  boost: '5×', color: '#c9a84c', desc: 'Supreme rank. Maximum airdrop share.' },
 ];
 
 export function ProfilePage() {
@@ -182,7 +182,7 @@ export function ProfilePage() {
   const refLink = `${window.location.origin}?ref=${profile.referralCode}`;
   const copyRef = () => { navigator.clipboard.writeText(refLink); toast.success('War code copied!'); };
   const winRate = profile.gamesPlayed ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
-  const AVATARS = ['⚔️', '🗡️', '🛡️', '👑', '🏹', '🪖'];
+  const AVATARS = ['♔', '♕', '♖', '♗', '♘', '♙'];
 
   return (
     <div className="page-wrap">
@@ -230,7 +230,7 @@ export function ProfilePage() {
       {/* NFT Minting */}
       <section className="profile-section">
         <div className="ps-head">
-          <h2>🛡️ Mint War NFTs</h2>
+          <h2>Mint War NFTs</h2>
           <p>Higher rank = higher point multiplier. Best NFT determines your boost.</p>
         </div>
         <div className="nft-mint-grid">
@@ -259,7 +259,7 @@ export function ProfilePage() {
       {/* Referral */}
       <section className="profile-section">
         <div className="ps-head">
-          <h2>👥 Recruit Warriors</h2>
+          <h2>Recruit Warriors</h2>
           <p>Earn <strong>1,000 war points</strong> for every recruit!</p>
         </div>
         <div className="ref-code-big">War Code: <strong>{profile.referralCode}</strong></div>
@@ -293,7 +293,7 @@ export function ProfilePage() {
 
       {/* Points log */}
       <section className="profile-section">
-        <div className="ps-head"><h2>📊 War Points Log</h2></div>
+        <div className="ps-head"><h2>Points Log</h2></div>
         {pointsLog.length === 0 ? (
           <p className="empty-msg">No battles yet — enter the war!</p>
         ) : (

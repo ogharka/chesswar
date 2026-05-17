@@ -101,7 +101,7 @@ export function LeaderboardPage() {
   return (
     <div className="page-wrap">
       <div className="page-header">
-        <h1>War Board</h1>
+        <h1>Leaderboard</h1>
         <p>Top warriors earn the biggest <strong>CWAR token airdrop</strong></p>
       </div>
       <div className="airdrop-banner">

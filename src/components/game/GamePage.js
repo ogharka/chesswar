@@ -1,926 +1,447 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap');
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Chessboard } from 'react-chessboard';
+import { Chess } from 'chess.js';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useStore } from '../../store/useStore';
+import { getBotMove, diffLabel } from '../../utils/chessBot';
+import toast from 'react-hot-toast';
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   CHESSWAR — Coinbase Light Theme
-   Clean · Smooth · Professional
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-:root {
-  /* Coinbase palette */
-  --cb-blue:       #0052FF;
-  --cb-blue-dark:  #0039B3;
-  --cb-blue-light: #EBF0FF;
-  --cb-blue-mid:   #CCd9FF;
+/* ── Sound ── */
+let actx = null;
+const getCtx = () => { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; };
+const tone = (f, d = 0.08, t = 'sine', v = 0.15) => {
+  try {
+    const c = getCtx(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination); o.type = t; o.frequency.value = f;
+    g.gain.setValueAtTime(v, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + d);
+    o.start(c.currentTime); o.stop(c.currentTime + d);
+  } catch { /* blocked */ }
+};
+const SFX = {
+  move:    () => tone(520, 0.06),
+  capture: () => { tone(280, 0.08, 'sawtooth'); setTimeout(() => tone(220, 0.1), 50); },
+  check:   () => { tone(660, 0.1, 'square'); setTimeout(() => tone(550, 0.1, 'square'), 120); },
+  castle:  () => { tone(440, 0.07); setTimeout(() => tone(520, 0.07), 80); },
+  win:     () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.2, 'sine', 0.2), i * 120)),
+  loss:    () => [440, 370, 311].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'sine', 0.15), i * 150)),
+};
 
-  /* Surface */
-  --bg-page:    #F5F7FA;
-  --bg-card:    #FFFFFF;
-  --bg-raised:  #F0F2F5;
-  --bg-sunken:  #E8EBF0;
-  --bg-overlay: rgba(0,0,0,0.5);
-
-  /* Text */
-  --text-primary:   #0A0B0D;
-  --text-secondary: #5B616E;
-  --text-muted:     #9EA6B3;
-  --text-inverse:   #FFFFFF;
-
-  /* Borders */
-  --border:       #E3E7EF;
-  --border-dark:  #C8CDD8;
-  --border-focus: #0052FF;
-
-  /* Semantic */
-  --green:      #05B169;
-  --green-bg:   #E6F9F1;
-  --red:        #EF4444;
-  --red-bg:     #FEF2F2;
-  --gold:       #F59E0B;
-  --gold-bg:    #FFFBEB;
-  --purple:     #8B5CF6;
-  --purple-bg:  #F5F3FF;
-
-  /* Radius */
-  --radius-sm:  6px;
-  --radius:     10px;
-  --radius-lg:  14px;
-  --radius-xl:  20px;
-
-  /* Shadow */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow:     0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg:  0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
-
-  /* Font */
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'Roboto Mono', monospace;
+/* ── Timer ── */
+function Timer({ seconds, active, side, inc }) {
+  const m = Math.floor(seconds / 60), s = seconds % 60;
+  const low = seconds <= 30, crit = seconds <= 10;
+  return (
+    <div className={`timer timer-${side} ${active ? 'timer-on' : 'timer-off'} ${low ? 'timer-low' : ''} ${crit ? 'timer-crit' : ''}`}>
+      {String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+      {inc > 0 && <span className="timer-inc">+{inc}s</span>}
+    </div>
+  );
 }
 
-/* ── Reset ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; }
-body {
-  font-family: var(--font);
-  background: var(--bg-page);
-  color: var(--text-primary);
-  min-height: 100vh;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+/* ── Move list ── */
+function MoveList({ moves, onPGN }) {
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.scrollIntoView({ behavior: 'smooth' }); }, [moves.length]);
+  const pairs = [];
+  for (let i = 0; i < moves.length; i += 2) pairs.push([moves[i], moves[i + 1]]);
+  return (
+    <div className="move-hist">
+      <div className="mh-header">
+        <span className="mh-title">Battle Log</span>
+        {moves.length > 0 && <button className="mh-pgn-btn" onClick={onPGN}>PGN ↗</button>}
+      </div>
+      <div className="mh-body">
+        {pairs.length === 0 && <p className="mh-empty">Awaiting first move…</p>}
+        {pairs.map((p, i) => (
+          <div key={i} className="mh-row">
+            <span className="mh-num">{i + 1}.</span>
+            <span className="mh-w">{p[0]?.san}</span>
+            <span className="mh-b">{p[1]?.san || ''}</span>
+          </div>
+        ))}
+        <div ref={ref} />
+      </div>
+    </div>
+  );
 }
-a { color: inherit; text-decoration: none; }
-button { cursor: pointer; font-family: var(--font); border: none; background: none; }
-input { font-family: var(--font); }
 
-/* ── Boot screen ── */
-.boot-screen {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; background: var(--cb-blue);
+/* ── Promotion picker ── */
+function PromoPicker({ color, onSelect }) {
+  const opts = [
+    { t: 'q', s: color === 'w' ? '♕' : '♛', n: 'Queen'  },
+    { t: 'r', s: color === 'w' ? '♖' : '♜', n: 'Rook'   },
+    { t: 'b', s: color === 'w' ? '♗' : '♝', n: 'Bishop' },
+    { t: 'n', s: color === 'w' ? '♘' : '♞', n: 'Knight' },
+  ];
+  return (
+    <div className="promo-overlay">
+      <div className="promo-modal">
+        <p className="promo-title">Choose your weapon</p>
+        <div className="promo-grid">
+          {opts.map((o) => (
+            <button key={o.t} className="promo-btn" onClick={() => onSelect(o.t)}>
+              <span className="promo-piece">{o.s}</span>
+              <span className="promo-label">{o.n}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
-.boot-inner { text-align: center; }
-.boot-logo { font-size: 52px; margin-bottom: 16px; letter-spacing: -8px; }
-.boot-inner h1 {
-  font-size: 36px; font-weight: 800; color: #fff;
-  letter-spacing: -0.5px; margin-bottom: 8px;
-}
-.boot-inner p { color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 28px; }
-.boot-bar {
-  width: 180px; height: 3px; background: rgba(255,255,255,0.2);
-  border-radius: 2px; margin: 0 auto; overflow: hidden;
-}
-.boot-fill {
-  height: 100%; background: #fff; border-radius: 2px;
-  animation: boot-slide 1.2s ease-in-out infinite alternate;
-}
-@keyframes boot-slide { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
-@keyframes pulse-war  { 0%,100% { opacity:1; } 50% { opacity:.6; } }
 
-/* ── App shell ── */
-.app-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-page); }
-.app-main  { flex: 1; max-width: 1300px; width: 100%; margin: 0 auto; padding: 0 24px 56px; }
+/* ── Time controls ── */
+const TIME_OPTS = [
+  { label: '1+0',   base: 60,   inc: 0  },
+  { label: '3+2',   base: 180,  inc: 2  },
+  { label: '5+0',   base: 300,  inc: 0  },
+  { label: '5+3',   base: 300,  inc: 3  },
+  { label: '10+0',  base: 600,  inc: 0  },
+  { label: '15+10', base: 900,  inc: 10 },
+  { label: '30+0',  base: 1800, inc: 0  },
+];
+const BOT_DIFFS = ['easy', 'medium', 'hard', 'master'];
+const PSYMS = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NAVBAR
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.navbar {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 100;
-  box-shadow: var(--shadow-sm);
-}
-.navbar-inner {
-  max-width: 1300px; margin: 0 auto; padding: 0 24px;
-  height: 58px; display: flex; align-items: center; gap: 8px;
-}
-.navbar-brand { display: flex; align-items: center; gap: 10px; margin-right: 16px; }
-.brand-icon { font-size: 18px; letter-spacing: -4px; margin-right: 4px; }
-.brand-text { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
-.brand-text span { color: var(--cb-blue); }
-.navbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; }
-.nav-link {
-  padding: 7px 13px; border-radius: var(--radius-sm);
-  font-size: 14px; font-weight: 500; color: var(--text-secondary);
-  transition: all .15s;
-}
-.nav-link:hover  { color: var(--text-primary); background: var(--bg-raised); }
-.nav-link.active { color: var(--cb-blue); background: var(--cb-blue-light); font-weight: 600; }
-.nav-play-wrap { position: relative; }
-.nav-battle-btn {
-  padding: 8px 16px; border-radius: var(--radius-sm);
-  font-size: 14px; font-weight: 600; color: #fff;
-  background: var(--cb-blue); transition: all .15s;
-}
-.nav-battle-btn:hover { background: var(--cb-blue-dark); }
-.nav-play-dropdown {
-  position: absolute; top: calc(100% + 8px); left: 0;
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 8px; min-width: 220px;
-  box-shadow: var(--shadow-lg); z-index: 200;
-}
-.play-dropdown-item {
-  width: 100%; display: flex; flex-direction: column; padding: 10px 12px;
-  border-radius: var(--radius-sm); text-align: left; gap: 2px; transition: background .1s;
-}
-.play-dropdown-item:hover { background: var(--bg-raised); }
-.pdi-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.pdi-sub   { font-size: 12px; color: var(--text-muted); }
-.navbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.usdc-chip {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--green-bg); border: 1px solid rgba(5,177,105,.2);
-  border-radius: 20px; padding: 5px 12px;
-  font-size: 13px; color: var(--green); font-weight: 600;
-}
-.points-chip {
-  display: flex; align-items: center; gap: 7px;
-  background: var(--gold-bg); border: 1px solid rgba(245,158,11,.2);
-  border-radius: 20px; padding: 5px 12px;
-}
-.pc-val   { font-size: 14px; font-weight: 700; color: #92400E; font-family: var(--mono); }
-.pc-boost {
-  background: var(--cb-blue); color: #fff;
-  font-size: 11px; font-weight: 700; border-radius: 10px; padding: 2px 7px;
-}
-.wallet-wrap { position: relative; }
-.wallet-chip {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: 20px; padding: 6px 14px;
-  font-size: 13px; font-weight: 600; color: var(--text-primary);
-  transition: all .15s;
-}
-.wallet-chip:hover { border-color: var(--cb-blue); background: var(--cb-blue-light); }
-.wc-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; flex-shrink: 0; }
-.wallet-dropdown {
-  position: absolute; top: calc(100% + 8px); right: 0;
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 8px; min-width: 250px;
-  box-shadow: var(--shadow-lg); z-index: 200;
-}
-.wd-addr { font-size: 11px; color: var(--text-muted); padding: 6px 10px; font-family: var(--mono); word-break: break-all; }
-.wd-div  { height: 1px; background: var(--border); margin: 4px 0; }
-.wd-item {
-  display: block; width: 100%; padding: 9px 12px;
-  border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
-  color: var(--text-secondary); text-align: left; transition: all .1s;
-}
-.wd-item:hover { background: var(--bg-raised); color: var(--text-primary); }
-.wd-out:hover  { color: var(--red); }
+export default function GamePage() {
+  const { mode } = useParams();
+  const navigate = useNavigate();
+  const { addPoints, updateProfile, profile, addGameResult, nftBoost } = useStore();
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   CONNECT PAGE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.connect-page {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-  background: linear-gradient(135deg, #0039B3 0%, #0052FF 50%, #1A6BFF 100%);
-}
-.connect-bg {
-  position: absolute; inset: 0;
-  display: grid; grid-template-columns: repeat(8,1fr); grid-template-rows: repeat(8,1fr);
-  z-index: 0; opacity: 0.06;
-}
-.sq-l { background: #fff; }
-.sq-d { background: transparent; }
-.connect-overlay {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 20%, rgba(0,30,100,0.4) 100%);
-}
-.connect-card {
-  position: relative; z-index: 1;
-  background: var(--bg-card); border-radius: var(--radius-xl);
-  padding: 44px 40px; width: 100%; max-width: 480px;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.3);
-}
-.connect-logo { text-align: center; margin-bottom: 28px; }
-.connect-icon { font-size: 44px; margin-bottom: 12px; letter-spacing: -6px; }
-.connect-logo h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary); }
-.connect-logo h1 span { color: var(--cb-blue); }
-.connect-logo p { color: var(--text-secondary); font-size: 15px; margin-top: 6px; }
-.ref-applied {
-  background: var(--gold-bg); border: 1px solid rgba(245,158,11,.3);
-  border-radius: var(--radius); padding: 12px; font-size: 13px;
-  color: #92400E; text-align: center; margin-bottom: 16px;
-}
-.ref-input-wrap { margin-bottom: 16px; }
-.ref-input {
-  width: 100%; background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px; color: var(--text-primary);
-  font-size: 14px; text-align: center; transition: border-color .15s;
-}
-.ref-input:focus { outline: none; border-color: var(--cb-blue); background: #fff; }
-.connect-btn {
-  width: 100%; padding: 14px; background: var(--cb-blue);
-  border-radius: var(--radius); font-size: 16px; font-weight: 700;
-  color: #fff; transition: all .15s; margin-bottom: 10px;
-  box-shadow: 0 4px 12px rgba(0,82,255,0.3);
-}
-.connect-btn:hover:not(:disabled) { background: var(--cb-blue-dark); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,82,255,0.4); }
-.connect-btn:disabled { opacity: .5; cursor: not-allowed; }
-.connect-hint { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
-.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
-.feature-card {
-  background: var(--bg-raised); border-radius: var(--radius-sm);
-  padding: 12px 14px; display: flex; flex-direction: column; gap: 3px;
-}
-.fc-icon { font-size: 18px; }
-.feature-card strong { font-size: 13px; color: var(--text-primary); font-weight: 600; }
-.feature-card span   { font-size: 12px; color: var(--text-muted); }
-.connect-footer {
-  display: flex; align-items: center; justify-content: center;
-  gap: 6px; font-size: 12px; color: var(--text-muted);
-}
-.connect-footer strong { color: var(--cb-blue); }
+  const isBet = mode === 'bet';
+  const isBot = mode === 'bot';
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   DASHBOARD
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.dashboard { padding: 24px 0 48px; }
+  /* config */
+  const [configured, setConfigured] = useState(false);
+  const [timeOpt,   setTimeOpt]   = useState(TIME_OPTS[2]);
+  const [botDiff,   setBotDiff]   = useState('medium');
+  const [betAmt,    setBetAmt]    = useState('0.10');
+  const [betErr,    setBetErr]    = useState('');
+  const [soundOn,   setSoundOn]   = useState(true);
 
-/* Stats strip */
-.stats-strip {
-  display: flex; align-items: center;
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 18px 28px;
-  margin-bottom: 24px; overflow-x: auto;
-  box-shadow: var(--shadow-sm);
-}
-.ss-item  { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
-.ss-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); font-weight: 600; }
-.ss-val   { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--text-primary); }
-.ss-val.gold  { color: #92400E; }
-.ss-val.red   { color: var(--red); }
-.ss-val.green { color: var(--green); }
-.ss-div   { width: 1px; background: var(--border); margin: 0 24px; align-self: stretch; flex-shrink: 0; }
+  /* game */
+  const chessRef  = useRef(new Chess());
+  const timerRef  = useRef(null);
+  const overRef   = useRef(false);
+  const soundRef  = useRef(true);
+  useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
 
-/* Grid */
-.dash-grid { display: grid; grid-template-columns: 1fr 360px; gap: 20px; }
-.dash-left, .dash-right { display: flex; flex-direction: column; gap: 16px; }
+  const [fen,       setFen]      = useState(chessRef.current.fen());
+  const [moves,     setMoves]    = useState([]);
+  const [wTime,     setWTime]    = useState(300);
+  const [bTime,     setBTime]    = useState(300);
+  const [turn,      setTurn]     = useState('w');
+  const [started,   setStarted]  = useState(false);
+  const [over,      setOver]     = useState(null);
+  const [selected,  setSelected] = useState(null);
+  const [hilights,  setHilights] = useState({});
+  const [thinking,  setThinking] = useState(false);
+  const [flipped,   setFlipped]  = useState(false);
+  const [capW,      setCapW]     = useState([]);
+  const [capB,      setCapB]     = useState([]);
+  const [promo,     setPromo]    = useState(null);
 
-/* Panels */
-.panel {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 22px;
-  box-shadow: var(--shadow-sm); transition: box-shadow .2s;
-}
-.panel:hover { box-shadow: var(--shadow); }
-.panel-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
-}
-.panel-head h2 { font-size: 14px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: .7px; }
-.panel-action  { font-size: 13px; color: var(--cb-blue); font-weight: 600; }
-.panel-action:hover { text-decoration: underline; }
+  const sfx = useCallback((name) => { if (soundRef.current) SFX[name]?.(); }, []);
 
-/* Battle mode cards */
-.battle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.battle-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
-  background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius); padding: 18px; text-align: left;
-  transition: all .2s; cursor: pointer;
-}
-.battle-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  border-color: var(--cb-blue);
-  background: var(--bg-card);
-}
-.bc-pvp:hover  { border-color: var(--red); }
-.bc-bot:hover  { border-color: var(--cb-blue); }
-.bc-bet:hover  { border-color: var(--gold); }
-.bc-tour:hover { border-color: var(--purple); }
-.bc-icon { font-size: 28px; margin-bottom: 6px; color: var(--cb-blue); opacity: 0.8; }
-.battle-card strong { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-.battle-card span   { font-size: 12px; color: var(--text-muted); }
-.bc-pts {
-  font-size: 11px; font-weight: 700; color: var(--green);
-  background: var(--green-bg); padding: 3px 9px; border-radius: 10px; margin-top: 4px;
-}
-.bc-pts.fire { color: #92400E; background: var(--gold-bg); }
+  /* end game */
+  const endGame = useCallback((winner, reason) => {
+    if (overRef.current) return;
+    overRef.current = true;
+    clearInterval(timerRef.current);
+    const won = winner === 'w', draw = winner === 'd';
+    const base = draw ? 5 : won ? 20 : 10;
+    const earned = addPoints(base, `${mode} · ${reason}`, isBet);
+    updateProfile({
+      gamesPlayed: profile.gamesPlayed + 1,
+      gamesWon:    won  ? profile.gamesWon  + 1 : profile.gamesWon,
+      gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
+      gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
+      ...(isBet && { betGamesPlayed: (profile.betGamesPlayed || 0) + 1 }),
+    });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isBot ? `AI (${botDiff})` : 'Opponent', pointsEarned: earned });
+    setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
+    if (won) sfx('win'); else if (!draw) sfx('loss');
+    toast(won ? 'Victory!' : draw ? '= Draw!' : '✕ Defeated!', { duration: 3000 });
+  }, [addPoints, addGameResult, betAmt, botDiff, isBet, isBot, mode, profile, sfx, updateProfile]);
 
-/* Battle log */
-.empty-msg { font-size: 13px; color: var(--text-muted); text-align: center; padding: 32px 0; }
-.game-hist  { display: flex; flex-direction: column; gap: 4px; }
-.gh-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px; border-radius: var(--radius-sm);
-  background: var(--bg-raised); font-size: 13px;
-  transition: background .1s; border-left: 3px solid transparent;
-}
-.gh-row:hover  { background: var(--border); }
-.gh-row.win    { border-left-color: var(--green); }
-.gh-row.loss   { border-left-color: var(--red); }
-.gh-row.draw   { border-left-color: var(--text-muted); }
-.gh-opp  { flex: 1; font-weight: 600; color: var(--text-primary); }
-.gh-mode { color: var(--text-muted); font-size: 12px; }
-.gh-pts  { color: #92400E; font-weight: 700; font-family: var(--mono); }
-.gh-date { color: var(--text-muted); font-size: 12px; }
+  /* apply move */
+  const applyMove = useCallback((mv) => {
+    const chess = chessRef.current;
+    const res = chess.move(mv);
+    if (!res) return false;
+    const inc = timeOpt.inc || 0;
+    if (inc > 0) { if (res.color === 'w') setWTime((t) => t + inc); else setBTime((t) => t + inc); }
+    if (res.captured) { if (res.color === 'w') setCapW((p) => [...p, res.captured]); else setCapB((p) => [...p, res.captured]); sfx('capture'); }
+    else if (res.flags.includes('k') || res.flags.includes('q')) sfx('castle');
+    else sfx('move');
+    setFen(chess.fen()); setTurn(chess.turn()); setMoves((m) => [...m, res]);
+    setHilights({ [res.from]: { background: 'rgba(201,168,76,0.5)' }, [res.to]: { background: 'rgba(201,168,76,0.5)' } });
+    setSelected(null);
+    if (chess.isCheckmate()) { endGame(chess.turn() === 'w' ? 'b' : 'w', 'checkmate'); return true; }
+    if (chess.isDraw())      { endGame('d', 'draw'); return true; }
+    if (chess.isCheck())     { sfx('check'); toast('⚠️ Check!', { duration: 1000 }); }
+    return true;
+  }, [endGame, sfx, timeOpt.inc]);
 
-/* Airdrop panel */
-.airdrop-panel {
-  border-color: rgba(0,82,255,.2) !important;
-  background: linear-gradient(135deg, #fff 0%, var(--cb-blue-light) 100%) !important;
-}
-.ap-badge {
-  display: inline-block; background: var(--cb-blue); color: #fff;
-  font-size: 10px; font-weight: 700; border-radius: 4px;
-  padding: 2px 8px; letter-spacing: 1px; margin-bottom: 8px;
-}
-.airdrop-panel h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.airdrop-panel p  { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
-.ap-bar-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-.ap-bar  { height: 8px; background: var(--cb-blue-mid); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-.ap-fill { height: 100%; background: linear-gradient(90deg, var(--cb-blue), #4D8BFF); border-radius: 4px; transition: width .6s; }
-.ap-hint { font-size: 11px; color: var(--text-muted); }
+  /* timer */
+  useEffect(() => {
+    if (!started || over) return;
+    timerRef.current = setInterval(() => {
+      if (overRef.current) { clearInterval(timerRef.current); return; }
+      if (chessRef.current.turn() === 'w') setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+      else setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [started, over, endGame]);
 
-/* Multipliers */
-.mult-list { display: flex; flex-direction: column; gap: 6px; }
-.mult-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-radius: var(--radius-sm);
-  background: var(--bg-raised); border: 1px solid var(--border);
-}
-.mr-label { flex: 1; font-size: 13px; color: var(--text-secondary); }
-.mr-val   { font-size: 13px; font-weight: 700; font-family: var(--mono); color: var(--text-primary); }
-.mr-val.gold { color: #92400E; }
-.mr-val.fire { color: #92400E; }
-.mr-val.blue { color: var(--cb-blue); }
+  /* bot */
+  useEffect(() => {
+    if (!started || over || !isBot || chessRef.current.turn() !== 'b') return;
+    setThinking(true);
+    const delay = botDiff === 'easy' ? 300 : botDiff === 'medium' ? 600 : 1000;
+    const tid = setTimeout(() => {
+      const mv = getBotMove(chessRef.current.fen(), botDiff);
+      if (mv) applyMove(mv);
+      setThinking(false);
+    }, delay + Math.random() * 300);
+    return () => clearTimeout(tid);
+  }, [fen, started, over, isBot, botDiff, applyMove]);
 
-/* NFT boost table */
-.boost-table { display: flex; flex-direction: column; gap: 4px; }
-.bt-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 13px; border-radius: var(--radius-sm);
-  background: var(--bg-raised); font-size: 13px;
-  color: var(--text-muted); border: 1px solid var(--border);
-}
-.bt-row.bt-active {
-  background: var(--cb-blue-light); border-color: rgba(0,82,255,.3);
-  color: var(--text-primary);
-}
-.bt-boost { margin-left: auto; font-weight: 700; color: var(--cb-blue); font-family: var(--mono); }
-.bt-you   { font-size: 11px; color: var(--cb-blue); font-weight: 600; }
+  /* promotion */
+  const isPromo = (from, to) => {
+    const p = chessRef.current.get(from);
+    return p?.type === 'p' && ((p.color === 'w' && to[1] === '8') || (p.color === 'b' && to[1] === '1'));
+  };
 
-/* Referral */
-.ref-desc      { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
-.ref-link-row  { display: flex; gap: 8px; margin-bottom: 10px; }
-.ref-link-input {
-  flex: 1; background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 9px 10px;
-  font-size: 12px; color: var(--text-muted); font-family: var(--mono);
-  overflow: hidden; text-overflow: ellipsis;
-}
-.ref-copy-btn {
-  background: var(--bg-card); border: 1px solid var(--border);
-  color: var(--text-primary); border-radius: var(--radius-sm);
-  padding: 9px 16px; font-size: 13px; font-weight: 600;
-  transition: all .15s; flex-shrink: 0;
-}
-.ref-copy-btn:hover { border-color: var(--cb-blue); color: var(--cb-blue); background: var(--cb-blue-light); }
-.ref-share-btns { display: flex; gap: 8px; margin-bottom: 10px; }
-.rsb { flex: 1; padding: 8px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; color: #fff; transition: opacity .15s; }
-.rsb:hover { opacity: .85; }
-.ref-code-line { font-size: 12px; color: var(--text-muted); text-align: center; }
-.ref-code-line strong { color: var(--cb-blue); }
+  /* click */
+  const onSquareClick = (sq) => {
+    if (!started || over || thinking || (isBot && chessRef.current.turn() === 'b') || promo) return;
+    const chess = chessRef.current, piece = chess.get(sq);
+    if (!selected) {
+      if (piece && piece.color === chess.turn()) {
+        setSelected(sq);
+        const legal = chess.moves({ square: sq, verbose: true });
+        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+        legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+        setHilights(h);
+      }
+      return;
+    }
+    if (isPromo(selected, sq)) {
+      const legal = chess.moves({ square: selected, verbose: true }).map((m) => m.to);
+      if (legal.includes(sq)) { setPromo({ from: selected, to: sq }); setSelected(null); setHilights({}); return; }
+    }
+    const moved = applyMove({ from: selected, to: sq, promotion: 'q' });
+    if (!moved) {
+      if (piece && piece.color === chess.turn()) {
+        setSelected(sq);
+        const legal = chess.moves({ square: sq, verbose: true });
+        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+        legal.forEach((m) => { h[m.to] = { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+        setHilights(h);
+      } else { setSelected(null); setHilights({}); }
+    }
+  };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GAME PAGE  (keep dark — chess.com style)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.game-page { display: flex; flex-direction: column; gap: 8px; max-width: 920px; margin: 0 auto; padding: 20px 0 48px; }
-.player-row {
-  display: flex; align-items: center; justify-content: space-between;
-  background: #1E1E2E; border: 1px solid #2A2A3E;
-  border-radius: var(--radius-lg); padding: 12px 18px; gap: 12px;
-}
-.player-info { display: flex; align-items: center; gap: 10px; }
-.pi-av   { font-size: 26px; }
-.pi-det  { display: flex; flex-direction: column; gap: 2px; }
-.pi-name { font-size: 14px; font-weight: 600; color: #E8E8F0; }
-.pi-sub  { font-size: 11px; color: #666680; }
-.pi-thinking { font-size: 11px; color: #F59E0B; animation: pulse-war 1s infinite; }
-.pi-caps { display: flex; gap: 1px; flex-wrap: wrap; font-size: 14px; opacity: .7; }
-.game-layout { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
-.board-col   { width: min(540px, calc(100vw - 260px)); }
-.game-sidebar { display: flex; flex-direction: column; gap: 10px; }
-.bet-active-pill {
-  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
-  border-radius: 20px; padding: 7px 16px; font-size: 13px; font-weight: 700;
-  color: #F59E0B; text-align: center;
-}
-.bap-boost { color: var(--cb-blue); }
+  const onDrop = (from, to) => {
+    if (!started || over || thinking || (isBot && chessRef.current.turn() === 'b')) return false;
+    if (isPromo(from, to)) { setPromo({ from, to }); return false; }
+    return applyMove({ from, to, promotion: 'q' });
+  };
 
-/* Timers */
-.timer {
-  padding: 11px 20px; border-radius: var(--radius-sm);
-  font-family: var(--mono); font-size: 30px; font-weight: 700;
-  min-width: 126px; text-align: center; border: 2px solid transparent; transition: all .3s;
-}
-.timer-white { background: #F0D9B5; color: #1A1A1A; }
-.timer-black { background: #1E1E2E; color: #E8E8F0; border-color: #2A2A3E; }
-.timer-on    { border-color: var(--cb-blue) !important; box-shadow: 0 0 14px rgba(0,82,255,0.25); }
-.timer-off   { opacity: .5; }
-.timer-low.timer-on  { border-color: var(--gold) !important; }
-.timer-crit.timer-on { border-color: var(--red) !important; animation: crit-flash .5s infinite alternate; }
-@keyframes crit-flash { from { opacity:1; } to { opacity:.5; } }
-.timer-inc { font-size: 11px; font-weight: 400; opacity: .6; margin-left: 6px; font-family: var(--font); }
+  const onPromoSelect = (p) => { if (promo) { applyMove({ ...promo, promotion: p }); setPromo(null); } };
 
-/* Move history */
-.move-hist {
-  background: #1E1E2E; border: 1px solid #2A2A3E;
-  border-radius: var(--radius-lg); flex: 1; max-height: 340px;
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.mh-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px 8px; border-bottom: 1px solid #2A2A3E;
-}
-.mh-title   { font-size: 11px; font-weight: 700; color: #666680; text-transform: uppercase; letter-spacing: .6px; }
-.mh-pgn-btn { font-size: 11px; font-weight: 600; color: #4D8BFF; }
-.mh-pgn-btn:hover { text-decoration: underline; }
-.mh-body { flex: 1; overflow-y: auto; padding: 6px 0; }
-.mh-body::-webkit-scrollbar       { width: 4px; }
-.mh-body::-webkit-scrollbar-thumb { background: #2A2A3E; border-radius: 2px; }
-.mh-empty { padding: 20px; font-size: 13px; color: #666680; text-align: center; }
-.mh-row   { display: flex; gap: 8px; padding: 5px 14px; font-size: 13px; font-family: var(--mono); }
-.mh-num   { color: #666680; min-width: 28px; }
-.mh-w     { flex: 1; color: #E8E8F0; }
-.mh-b     { flex: 1; color: #9090A8; }
-.sidebar-controls { display: flex; gap: 6px; flex-wrap: wrap; }
-.sc-btn {
-  flex: 1; min-width: 36px; padding: 8px 4px;
-  background: #1E1E2E; border: 1px solid #2A2A3E;
-  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
-  color: #9090A8; transition: all .15s; text-align: center;
-}
-.sc-btn:hover    { color: #E8E8F0; border-color: #4A4A6A; }
-.sc-resign:hover { color: var(--red); border-color: var(--red); }
+  const exportPGN = () => { navigator.clipboard.writeText(chessRef.current.pgn()); toast.success('PGN copied!'); };
 
-/* Promotion */
-.promo-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.7);
-  display: flex; align-items: center; justify-content: center; z-index: 600;
-  backdrop-filter: blur(4px);
-}
-.promo-modal {
-  background: var(--bg-card); border-radius: var(--radius-lg);
-  padding: 28px; width: 300px; text-align: center;
-  box-shadow: var(--shadow-lg);
-}
-.promo-title  { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--cb-blue); }
-.promo-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.promo-btn    {
-  background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius); padding: 16px 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all .15s;
-}
-.promo-btn:hover  { border-color: var(--cb-blue); background: var(--cb-blue-light); }
-.promo-piece      { font-size: 36px; line-height: 1; }
-.promo-label      { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  const reset = () => {
+    chessRef.current.reset(); overRef.current = false;
+    setFen(chessRef.current.fen()); setMoves([]); setWTime(timeOpt.base); setBTime(timeOpt.base);
+    setTurn('w'); setOver(null); setSelected(null); setHilights({}); setCapW([]); setCapB([]); setThinking(false); setPromo(null);
+  };
 
-/* Game over */
-.game-over-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.65);
-  display: flex; align-items: center; justify-content: center; z-index: 500;
-  backdrop-filter: blur(6px);
-}
-.go-modal {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-xl); width: 100%; max-width: 380px;
-  overflow: hidden; box-shadow: var(--shadow-lg);
-}
-.go-banner { padding: 32px; text-align: center; }
-.go-win  { background: var(--green-bg); }
-.go-draw { background: var(--cb-blue-light); }
-.go-loss { background: var(--red-bg); }
-.go-title  { font-size: 28px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; color: var(--text-primary); }
-.go-reason { font-size: 14px; color: var(--text-secondary); }
-.go-stats  {
-  padding: 18px 22px; display: flex; flex-direction: column;
-  gap: 12px; border-bottom: 1px solid var(--border);
-}
-.go-row       { display: flex; justify-content: space-between; font-size: 14px; }
-.go-row span  { color: var(--text-muted); }
-.go-row .gold  { color: #92400E; font-size: 18px; font-weight: 700; }
-.go-row .green { color: var(--green); font-weight: 700; }
-.go-row .red   { color: var(--red); font-weight: 700; }
-.go-row .fire  { color: #92400E; font-weight: 700; }
-.go-actions { display: flex; gap: 8px; padding: 18px 22px; flex-wrap: wrap; }
-.go-btn {
-  flex: 1; min-width: 80px; padding: 12px 8px;
-  border-radius: var(--radius-sm); font-size: 13px; font-weight: 700;
-  transition: all .15s; background: var(--bg-raised);
-  color: var(--text-primary); border: 1px solid var(--border);
-}
-.go-btn:hover     { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-.go-rematch { background: var(--cb-blue); color: #fff; border-color: var(--cb-blue); }
-.go-rematch:hover { background: var(--cb-blue-dark); }
+  const startGame = () => {
+    if (isBet) { const n = parseFloat(betAmt); if (isNaN(n) || n < 0.1) { setBetErr('Minimum 0.10 USDC'); return; } setBetErr(''); }
+    reset(); setConfigured(true); setStarted(true);
+  };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   CONFIG SCREEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.config-screen {
-  min-height: calc(100vh - 58px);
-  display: flex; align-items: center; justify-content: center; padding: 40px 20px;
-}
-.config-card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-xl); padding: 36px; width: 100%; max-width: 480px;
-  box-shadow: var(--shadow);
-}
-.config-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; }
-.config-back:hover { color: var(--text-primary); }
-.config-title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 24px; color: var(--text-primary); }
-.config-group { margin-bottom: 20px; }
-.config-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
-.config-inline { display: flex; align-items: center; gap: 16px; }
-.config-inline label { margin: 0; }
-.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.diff-btn {
-  padding: 11px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-raised); transition: all .15s;
-}
-.diff-btn:hover       { color: var(--text-primary); border-color: var(--border-dark); }
-.diff-btn.active      { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; }
-.tc-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.tc-btn {
-  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 20px;
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-raised); transition: all .15s;
-}
-.tc-btn.active { background: var(--cb-blue); border-color: var(--cb-blue); color: #fff; }
-.sound-toggle {
-  padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--border);
-  font-size: 13px; font-weight: 600; background: var(--bg-raised); color: var(--text-secondary); transition: all .15s;
-}
-.sound-toggle.on { border-color: var(--green); color: var(--green); background: var(--green-bg); }
-.bet-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.bq-btn {
-  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 20px;
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-raised); transition: all .15s;
-}
-.bq-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
-.bet-custom-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.bet-cur   { font-size: 13px; color: var(--text-muted); min-width: 40px; }
-.bet-input {
-  flex: 1; background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); padding: 11px 14px;
-  color: var(--text-primary); font-size: 16px; font-family: var(--mono);
-  transition: border-color .15s;
-}
-.bet-input:focus { outline: none; border-color: var(--cb-blue); background: #fff; }
-.bet-error { color: var(--red); font-size: 12px; margin-bottom: 8px; }
-.bet-summary {
-  background: var(--bg-raised); border-radius: var(--radius-sm);
-  border: 1px solid var(--border); padding: 14px;
-  display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
-}
-.bs-row        { display: flex; justify-content: space-between; font-size: 13px; }
-.bs-row span   { color: var(--text-muted); }
-.bs-row .green { color: var(--green); font-weight: 600; }
-.bs-row .fire  { color: #92400E; font-weight: 600; }
-.config-start-btn {
-  width: 100%; padding: 15px; background: var(--cb-blue);
-  border-radius: var(--radius-sm); font-size: 16px; font-weight: 700;
-  color: #fff; transition: all .15s;
-  box-shadow: 0 4px 12px rgba(0,82,255,0.3);
-}
-.config-start-btn:hover { background: var(--cb-blue-dark); transform: translateY(-1px); }
+  const rematch = () => { reset(); setStarted(true); };
+  const resign  = () => { if (!started || over) return; if (window.confirm('Retreat from battle?')) endGame('b', 'resignation'); };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   OTHER PAGES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.page-wrap   { padding: 24px 0 48px; }
-.page-header { margin-bottom: 24px; }
-.page-header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 6px; }
-.page-header p  { font-size: 14px; color: var(--text-secondary); }
-.tourney-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 16px; margin-bottom: 32px; }
-.tourney-card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 22px;
-  display: flex; flex-direction: column; gap: 14px;
-  box-shadow: var(--shadow-sm); transition: all .2s;
-}
-.tourney-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
-.tc-joined { border-color: var(--cb-blue) !important; }
-.tc-top    { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.tc-name   { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.tc-status { font-size: 12px; font-weight: 600; }
-.tc-status.open { color: var(--green); }
-.tc-status.full { color: var(--red); }
-.tc-prize-badge {
-  background: var(--gold-bg); border: 1px solid rgba(245,158,11,.3);
-  border-radius: var(--radius-sm); padding: 6px 12px;
-  font-size: 14px; font-weight: 700; color: #92400E; white-space: nowrap;
-}
-.tc-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tc-detail  { display: flex; flex-direction: column; gap: 2px; }
-.tc-detail span   { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
-.tc-detail strong { font-size: 13px; font-weight: 600; }
-.tc-bar-wrap { display: flex; align-items: center; gap: 8px; }
-.tc-bar  { flex: 1; height: 6px; background: var(--bg-sunken); border-radius: 3px; overflow: hidden; }
-.tc-fill { height: 100%; background: var(--cb-blue); border-radius: 3px; }
-.tc-pct  { font-size: 12px; color: var(--text-muted); min-width: 32px; text-align: right; }
-.tc-prizes  { font-size: 13px; color: var(--text-secondary); }
-.tc-join-btn {
-  width: 100%; padding: 12px; background: var(--cb-blue);
-  border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
-  color: #fff; transition: all .15s;
-}
-.tc-join-btn:hover:not(:disabled) { background: var(--cb-blue-dark); }
-.tc-join-btn:disabled { opacity: .4; cursor: not-allowed; }
-.tc-full     { background: var(--bg-raised) !important; color: var(--text-muted); }
-.tc-joined-badge {
-  text-align: center; font-size: 14px; font-weight: 700;
-  color: var(--cb-blue); padding: 10px;
-  background: var(--cb-blue-light); border-radius: var(--radius-sm);
-}
-.tourney-rules {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 22px;
-}
-.tourney-rules h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-.tourney-rules ul { display: flex; flex-direction: column; gap: 8px; }
-.tourney-rules li { font-size: 13px; color: var(--text-secondary); padding-left: 14px; position: relative; }
-.tourney-rules li::before { content: '—'; position: absolute; left: 0; color: var(--cb-blue); }
-.airdrop-banner {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  background: linear-gradient(135deg, var(--bg-card), var(--cb-blue-light));
-  border: 1px solid rgba(0,82,255,.2);
-  border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 20px;
-}
-.ab-left   { display: flex; align-items: center; gap: 16px; }
-.ab-icon   { font-size: 32px; flex-shrink: 0; }
-.ab-left strong { font-size: 16px; font-weight: 700; display: block; margin-bottom: 4px; }
-.ab-left p      { font-size: 13px; color: var(--text-secondary); }
-.ab-supply { font-size: 22px; font-weight: 800; color: var(--cb-blue); letter-spacing: -0.5px; }
-.ab-sub    { font-size: 11px; color: var(--text-muted); }
-.your-pos-card {
-  background: var(--bg-card); border: 1px solid rgba(0,82,255,.3);
-  border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-sm);
-}
-.ypc-rank { font-size: 24px; font-weight: 800; color: var(--cb-blue); font-family: var(--mono); min-width: 60px; }
-.ypc-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.ypc-info strong { font-size: 15px; font-weight: 700; }
-.ypc-info span   { font-size: 13px; color: var(--text-muted); }
-.ypc-gap  { font-size: 13px; color: var(--text-secondary); }
-.lb-table {
-  width: 100%; border-collapse: collapse; margin-bottom: 28px;
-  background: var(--bg-card); border-radius: var(--radius-lg);
-  overflow: hidden; border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-.lb-table th {
-  padding: 12px 16px; font-size: 11px; text-transform: uppercase;
-  letter-spacing: .6px; color: var(--text-muted); text-align: left;
-  border-bottom: 1px solid var(--border); background: var(--bg-raised);
-  font-weight: 700;
-}
-.lb-row td   { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
-.lb-row:last-child td { border-bottom: none; }
-.lb-row:hover td { background: var(--bg-raised); }
-.lb-rank-1 td { background: rgba(245,158,11,.05); }
-.lb-rank-2 td { background: rgba(156,163,175,.04); }
-.lb-rank-3 td { background: rgba(239,68,68,.04); }
-.lb-rank  { font-size: 16px; width: 60px; }
-.lb-player strong { display: block; font-size: 14px; font-weight: 600; }
-.lb-player span   { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
-.lb-pts   { font-family: var(--mono); font-weight: 700; color: #92400E; font-size: 14px; }
-.lb-boost { font-weight: 700; color: var(--cb-blue); }
-.profile-header {
-  text-align: center; margin-bottom: 28px;
-  padding-bottom: 28px; border-bottom: 1px solid var(--border);
-}
-.ph-avatar-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; }
-.ph-av-opt {
-  font-size: 20px; width: 38px; height: 38px; border-radius: 50%;
-  background: var(--bg-raised); border: 2px solid transparent; transition: all .15s;
-}
-.ph-av-opt:hover   { border-color: var(--border-dark); }
-.ph-av-opt.selected { border-color: var(--cb-blue); background: var(--cb-blue-light); box-shadow: 0 0 0 3px rgba(0,82,255,.15); }
-.ph-big-av  { font-size: 64px; margin-bottom: 12px; }
-.ph-name-row {
-  display: flex; align-items: center; justify-content: center;
-  gap: 12px; margin-bottom: 8px;
-}
-.ph-name-row h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; }
-.ph-edit-btn    { font-size: 13px; color: var(--text-muted); }
-.ph-edit-btn:hover { color: var(--cb-blue); }
-.ph-name-edit {
-  display: flex; align-items: center; gap: 8px;
-  justify-content: center; margin-bottom: 8px;
-}
-.ph-name-input {
-  background: var(--bg-card); border: 1.5px solid var(--cb-blue);
-  border-radius: var(--radius-sm); padding: 8px 14px;
-  color: var(--text-primary); font-size: 18px; font-weight: 700;
-  width: 220px; text-align: center; font-family: var(--font);
-}
-.ph-name-input:focus { outline: none; }
-.ph-save   { background: var(--cb-blue); color: #fff; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; }
-.ph-cancel { background: var(--bg-raised); color: var(--text-secondary); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; border: 1px solid var(--border); }
-.ph-addr   { font-size: 12px; color: var(--text-muted); font-family: var(--mono); word-break: break-all; margin-bottom: 4px; }
-.ph-joined { font-size: 12px; color: var(--text-muted); }
-.stat-grid-6 { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; margin-bottom: 28px; }
-.sg-item {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 16px;
-  display: flex; flex-direction: column; gap: 4px;
-  box-shadow: var(--shadow-sm);
-}
-.sg-val   { font-size: 22px; font-weight: 800; font-family: var(--mono); color: var(--text-primary); }
-.sg-val.gold  { color: #92400E; }
-.sg-val.red   { color: var(--red); }
-.sg-val.green { color: var(--green); }
-.sg-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-.profile-section {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 26px; margin-bottom: 20px;
-  box-shadow: var(--shadow-sm);
-}
-.ps-head { margin-bottom: 20px; }
-.ps-head h2 { font-size: 17px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.2px; }
-.ps-head p  { font-size: 13px; color: var(--text-secondary); }
-.nft-mint-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-.nft-card {
-  background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg); padding: 22px 16px;
-  display: flex; flex-direction: column; gap: 8px; align-items: center;
-  text-align: center; transition: all .2s;
-}
-.nft-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--nft-color, var(--cb-blue)); }
-.nft-active { border-color: var(--nft-color, var(--cb-blue)) !important; background: var(--bg-card); box-shadow: var(--shadow-sm); }
-.nc-sym   { font-size: 40px; line-height: 1; }
-.nc-name  { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; }
-.nc-desc  { font-size: 12px; color: var(--text-muted); }
-.nc-boost { font-size: 18px; font-weight: 800; color: var(--cb-blue); }
-.nc-price { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
-.nc-owned, .nc-current {
-  font-size: 11px; color: var(--text-muted);
-  background: var(--bg-sunken); padding: 2px 9px; border-radius: 10px;
-}
-.nc-current { color: var(--green); background: var(--green-bg); }
-.nc-mint-btn {
-  width: 100%; padding: 11px; border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 700; color: #fff;
-  transition: all .15s; margin-top: 4px;
-}
-.nc-mint-btn:hover:not(:disabled) { opacity: .85; transform: translateY(-1px); }
-.nc-mint-btn:disabled { opacity: .4; cursor: not-allowed; }
-.ref-code-big {
-  background: var(--cb-blue-light); border: 1px solid rgba(0,82,255,.2);
-  border-radius: var(--radius-sm); padding: 12px 16px;
-  font-size: 16px; text-align: center; margin-bottom: 12px; letter-spacing: 2px;
-}
-.ref-code-big strong { color: var(--cb-blue); font-family: var(--mono); }
-.ref-link-row-big { display: flex; gap: 8px; margin-bottom: 12px; }
-.ref-link-input-big {
-  flex: 1; background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 11px 12px;
-  font-size: 12px; color: var(--text-muted); font-family: var(--mono);
-  overflow: hidden; text-overflow: ellipsis;
-}
-.ref-copy-big {
-  background: var(--cb-blue); color: #fff; border-radius: var(--radius-sm);
-  padding: 11px 20px; font-size: 14px; font-weight: 700;
-  flex-shrink: 0; transition: all .15s;
-}
-.ref-copy-big:hover { background: var(--cb-blue-dark); }
-.ref-share-row  { display: flex; gap: 8px; margin-bottom: 16px; }
-.ref-share-btn  { flex: 1; padding: 11px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: #fff; transition: opacity .15s; }
-.ref-share-btn:hover { opacity: .85; }
-.ref-stats-row  { display: flex; gap: 14px; }
-.rsr-item {
-  flex: 1; background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px;
-  display: flex; flex-direction: column; gap: 4px; align-items: center;
-}
-.rsr-item strong { font-size: 22px; font-weight: 800; color: var(--cb-blue); }
-.rsr-item span   { font-size: 12px; color: var(--text-muted); }
-.pts-log { display: flex; flex-direction: column; gap: 6px; }
-.pl-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: var(--bg-raised); border-radius: var(--radius-sm);
-  padding: 11px 14px; border: 1px solid var(--border);
-}
-.pl-left   { display: flex; flex-direction: column; gap: 3px; }
-.pl-reason { font-size: 13px; font-weight: 600; }
-.pl-time   { font-size: 11px; color: var(--text-muted); }
-.pl-right  { display: flex; align-items: center; gap: 8px; }
-.pl-amount { font-size: 15px; font-weight: 700; color: var(--cb-blue); font-family: var(--mono); }
-.pl-tag    { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
-.pl-tag.green { background: var(--green-bg); color: var(--green); }
-.pl-tag.fire  { background: var(--gold-bg); color: #92400E; }
+  /* ── Config screen ── */
+  if (!configured) {
+    return (
+      <div className="config-screen">
+        <div className="config-card">
+          <button className="config-back" onClick={() => navigate('/')}>← Retreat</button>
+          <h2 className="config-title">
+            {isBot ? '◈ Battle vs AI' : isBet ? 'Bet Battle' : 'PvP Battle'}
+          </h2>
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   USERNAME SETUP
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.username-setup-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000; backdrop-filter: blur(8px);
-}
-.username-setup-card {
-  background: var(--bg-card); border-radius: var(--radius-xl);
-  padding: 44px 40px; width: 100%; max-width: 460px;
-  box-shadow: var(--shadow-lg);
-}
-.us-header { text-align: center; margin-bottom: 28px; }
-.us-logo   { font-size: 44px; margin-bottom: 12px; letter-spacing: -6px; color: var(--cb-blue); }
-.us-header h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; letter-spacing: -0.3px; }
-.us-header p  { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
-.us-section { margin-bottom: 20px; }
-.us-label   { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--text-muted); margin-bottom: 10px; }
-.us-avatar-grid { display: flex; gap: 10px; justify-content: center; }
-.us-avatar-btn {
-  width: 52px; height: 52px; border-radius: 50%;
-  font-size: 24px; background: var(--bg-raised);
-  border: 2px solid transparent; transition: all .15s;
-}
-.us-avatar-btn:hover   { border-color: var(--border-dark); background: var(--bg-sunken); }
-.us-avatar-btn.selected { border-color: var(--cb-blue); background: var(--cb-blue-light); box-shadow: 0 0 0 3px rgba(0,82,255,.15); }
-.us-input-wrap {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--bg-raised); border: 1.5px solid var(--border);
-  border-radius: var(--radius); padding: 11px 14px; transition: all .15s;
-}
-.us-input-wrap:focus-within { border-color: var(--cb-blue); background: #fff; box-shadow: 0 0 0 3px rgba(0,82,255,.1); }
-.us-preview-av { font-size: 22px; flex-shrink: 0; }
-.us-input {
-  flex: 1; background: none; border: none; outline: none;
-  font-size: 16px; font-weight: 600; color: var(--text-primary); font-family: var(--font);
-}
-.us-input::placeholder { color: var(--text-muted); font-weight: 400; }
-.us-char-count { font-size: 12px; color: var(--text-muted); flex-shrink: 0; font-family: var(--mono); }
-.us-input-err  { border-color: var(--red) !important; }
-.us-input-ok   { border-color: var(--green) !important; }
-.us-error { font-size: 12px; color: var(--red); margin-top: 6px; }
-.us-ok    { font-size: 12px; color: var(--green); margin-top: 6px; }
-.us-wallet-info {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 10px 14px;
-  font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 20px;
-}
-.us-wallet-dot   { width: 8px; height: 8px; background: var(--green); border-radius: 50%; flex-shrink: 0; }
-.us-wallet-label { margin-left: auto; color: var(--text-muted); font-family: var(--font); font-size: 11px; }
-.us-submit-btn {
-  width: 100%; padding: 15px; background: var(--cb-blue);
-  border-radius: var(--radius-sm); font-size: 16px; font-weight: 700;
-  color: #fff; transition: all .15s; margin-bottom: 10px;
-  box-shadow: 0 4px 12px rgba(0,82,255,0.3);
-}
-.us-submit-btn:hover:not(:disabled) { background: var(--cb-blue-dark); transform: translateY(-1px); }
-.us-submit-btn:disabled { opacity: .35; cursor: not-allowed; }
-.us-skip-btn { width: 100%; padding: 10px; font-size: 13px; color: var(--text-muted); transition: color .15s; }
-.us-skip-btn:hover { color: var(--text-primary); }
+          {isBot && (
+            <div className="config-group">
+              <label>Enemy Strength</label>
+              <div className="diff-grid">
+                {BOT_DIFFS.map((d) => (
+                  <button key={d} className={`diff-btn ${botDiff === d ? 'active' : ''}`} onClick={() => setBotDiff(d)}>
+                    {diffLabel(d)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-/* ── Utility ── */
-.gold  { color: #92400E !important; }
-.red   { color: var(--red) !important; }
-.green { color: var(--green) !important; }
-.blue  { color: var(--cb-blue) !important; }
-.fire  { color: #92400E !important; }
+          <div className="config-group">
+            <label>Battle Timer</label>
+            <div className="tc-grid">
+              {TIME_OPTS.map((t) => (
+                <button key={t.label} className={`tc-btn ${timeOpt.label === t.label ? 'active' : ''}`} onClick={() => setTimeOpt(t)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-::-webkit-scrollbar       { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+          <div className="config-group config-inline">
+            <label>Sound</label>
+            <button className={`sound-toggle ${soundOn ? 'on' : 'off'}`} onClick={() => setSoundOn((s) => !s)}>
+              {soundOn ? '🔊 On' : '🔇 Off'}
+            </button>
+          </div>
 
-/* ── Responsive ── */
-@media (max-width: 1024px) {
-  .dash-grid       { grid-template-columns: 1fr; }
-  .nft-mint-grid   { grid-template-columns: repeat(2,1fr); }
-  .stat-grid-6     { grid-template-columns: repeat(3,1fr); }
-}
-@media (max-width: 768px) {
-  .game-layout     { grid-template-columns: 1fr; }
-  .board-col       { width: 100% !important; }
-  .game-sidebar    { flex-direction: row; flex-wrap: wrap; }
-  .move-hist       { flex: 1; min-width: 200px; max-height: 180px; }
-  .navbar-nav      { display: none; }
-  .stat-grid-6     { grid-template-columns: repeat(2,1fr); }
-  .nft-mint-grid   { grid-template-columns: repeat(2,1fr); }
-  .tourney-grid    { grid-template-columns: 1fr; }
-  .app-main        { padding: 0 16px 48px; }
+          {isBet && (
+            <div className="config-group">
+              <label>Wager Amount (USDC)</label>
+              <div className="bet-quick">
+                {[0.1, 0.5, 1, 5, 10, 50, 100].map((v) => (
+                  <button key={v} className={`bq-btn ${parseFloat(betAmt) === v ? 'active' : ''}`}
+                    onClick={() => { setBetAmt(v.toFixed(2)); setBetErr(''); }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <div className="bet-custom-row">
+                <span className="bet-cur">USDC</span>
+                <input type="number" className="bet-input" value={betAmt} min="0.1" step="0.01"
+                  onChange={(e) => { setBetAmt(e.target.value); setBetErr(''); }} />
+              </div>
+              {betErr && <p className="bet-error">{betErr}</p>}
+              <div className="bet-summary">
+                <div className="bs-row"><span>You wager</span><strong>{parseFloat(betAmt) || 0} USDC</strong></div>
+                <div className="bs-row"><span>If you win</span><strong className="green">+{((parseFloat(betAmt) || 0) * 2 * 0.98).toFixed(2)} USDC</strong></div>
+                <div className="bs-row"><span>Platform fee</span><strong>2%</strong></div>
+                <div className="bs-row"><span>Point boost</span><strong className="fire">× 5× all points</strong></div>
+              </div>
+            </div>
+          )}
+
+          <button className="config-start-btn" onClick={startGame}>
+            {isBet ? `Start Bet Battle · ${parseFloat(betAmt) || 0} USDC` : 'Enter Battle'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Game screen ── */
+  return (
+    <div className="game-page">
+
+      {/* Opponent */}
+      <div className="player-row">
+        <div className="player-info">
+          <div className="pi-av">{isBot ? '◈' : '👤'}</div>
+          <div className="pi-det">
+            <span className="pi-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</span>
+            {thinking && <span className="pi-thinking">calculating…</span>}
+          </div>
+          <div className="pi-caps">{capB.map((p, i) => <span key={i}>{PSYMS[p]}</span>)}</div>
+        </div>
+        <Timer seconds={bTime} active={started && !over && turn === 'b'} side="black" inc={timeOpt.inc} />
+      </div>
+
+      {/* Board + sidebar */}
+      <div className="game-layout">
+        <div className="board-col">
+          <Chessboard
+            position={fen}
+            onSquareClick={onSquareClick}
+            onPieceDrop={onDrop}
+            boardOrientation={flipped ? 'black' : 'white'}
+            customSquareStyles={hilights}
+            customBoardStyle={{ borderRadius: '4px', boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}
+            customDarkSquareStyle={{ backgroundColor: '#4a1a1a' }}
+            customLightSquareStyle={{ backgroundColor: '#c9a84c' }}
+            areArrowsAllowed
+          />
+        </div>
+
+        <div className="game-sidebar">
+          {isBet && (
+            <div className="bet-active-pill">
+              ◎ {betAmt} USDC · <span className="bap-boost">× 5× War Points</span>
+            </div>
+          )}
+          <MoveList moves={moves} onPGN={exportPGN} />
+          <div className="sidebar-controls">
+            <button className="sc-btn" onClick={() => setFlipped((f) => !f)}>⟳</button>
+            <button className="sc-btn" onClick={() => setSoundOn((s) => !s)}>{soundOn ? '🔊' : '🔇'}</button>
+            {started && !over && <button className="sc-btn sc-resign" onClick={resign}>🏳</button>}
+            <button className="sc-btn" onClick={() => navigate('/')}>🏠</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Self */}
+      <div className="player-row">
+        <Timer seconds={wTime} active={started && !over && turn === 'w'} side="white" inc={timeOpt.inc} />
+        <div className="player-info">
+          <div className="pi-caps">{capW.map((p, i) => <span key={i}>{PSYMS[p]}</span>)}</div>
+          <div className="pi-det">
+            <span className="pi-name">You (White)</span>
+            <span className="pi-sub">{nftBoost}× boost{isBet ? ' · × 5×Bet' : ''}</span>
+          </div>
+          <div className="pi-av">♙</div>
+        </div>
+      </div>
+
+      {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
+
+      {/* Game over */}
+      {over && (
+        <div className="game-over-overlay">
+          <div className="go-modal">
+            <div className={`go-banner ${over.winner === 'w' ? 'go-win' : over.winner === 'd' ? 'go-draw' : 'go-loss'}`}>
+              <div className="go-title">
+                {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? '= Draw' : '✕ Defeated'}
+              </div>
+              <div className="go-reason">
+                {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate — enemy king falls!' : 'Your king has fallen')}
+                {over.reason === 'resignation' && (over.winner === 'w' ? 'Enemy retreated' : 'You retreated')}
+                {over.reason === 'timeout'     && (over.winner === 'w' ? 'Enemy ran out of time' : 'Time expired')}
+                {over.reason === 'draw'        && 'Battle drawn'}
+              </div>
+            </div>
+            <div className="go-stats">
+              <div className="go-row"><span>War points</span><strong className="gold">+{over.earned}</strong></div>
+              <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
+              {isBet && (
+                <div className="go-row">
+                  <span>Wager result</span>
+                  <strong className={over.winner === 'w' ? 'green' : 'red'}>
+                    {over.winner === 'w' ? `+${(parseFloat(betAmt) * 2 * 0.98).toFixed(2)} USDC` : over.winner === 'd' ? 'Refunded' : `-${betAmt} USDC`}
+                  </strong>
+                </div>
+              )}
+              {isBet && <div className="go-row"><span>Bet boost</span><strong className="fire">× 5× applied</strong></div>}
+            </div>
+            <div className="go-actions">
+              <button className="go-btn go-rematch" onClick={rematch}>🔄 Rematch</button>
+              <button className="go-btn" onClick={exportPGN}>📋 PGN</button>
+              <button className="go-btn go-home" onClick={() => navigate('/')}>🏠 Home</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

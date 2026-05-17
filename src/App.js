@@ -5,6 +5,7 @@ import { useStore } from './store/useStore';
 import { connectWallet } from './utils/wallet';
 import Navbar from './components/layout/Navbar';
 import ConnectPage from './components/layout/ConnectPage';
+import UsernameSetup from './components/layout/UsernameSetup';
 import Dashboard from './components/layout/Dashboard';
 import GamePage from './components/game/GamePage';
 import TournamentPage from './components/layout/TournamentPage';
@@ -13,8 +14,9 @@ import ProfilePage from './components/layout/ProfilePage';
 import './styles/global.css';
 
 export default function App() {
-  const { wallet, setWallet, setProvider, initProfile } = useStore();
+  const { wallet, setWallet, setProvider, initProfile, profile } = useStore();
   const [booting, setBooting] = useState(true);
+  const [showUsernameSetup, setShowUsernameSetup] = useState(false);
 
   useEffect(() => {
     const tryReconnect = async () => {
@@ -34,6 +36,13 @@ export default function App() {
     tryReconnect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Show username setup when wallet connects but no username set
+  useEffect(() => {
+    if (wallet && !profile.username) {
+      setShowUsernameSetup(true);
+    }
+  }, [wallet, profile.username]);
+
   if (booting) {
     return (
       <div className="boot-screen">
@@ -48,6 +57,10 @@ export default function App() {
   }
 
   if (!wallet) return <ConnectPage />;
+
+  if (showUsernameSetup) {
+    return <UsernameSetup onDone={() => setShowUsernameSetup(false)} />;
+  }
 
   return (
     <BrowserRouter>

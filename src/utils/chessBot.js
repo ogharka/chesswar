@@ -110,11 +110,11 @@ export function getBotMove(fen, diff) {
   const chess = new Chess(fen);
   const moves = chess.moves({ verbose: true });
   if (!moves.length) return null;
-  if (diff === 'easy') {
+  if (diff === 'beginner') {
     const caps = moves.filter((m) => m.captured);
     return Math.random() < 0.5 && caps.length ? caps[Math.floor(Math.random() * caps.length)] : moves[Math.floor(Math.random() * moves.length)];
   }
-  const depth = diff === 'medium' ? 2 : diff === 'hard' ? 3 : 4;
+  const depth = diff === 'intermediate' ? 2 : diff === 'hard' ? 3 : diff === 'veryhard' ? 4 : 1;
   const max = chess.turn() === 'w';
   let best = moves[0], bestVal = max ? -Infinity : Infinity;
   for (const m of moves) {
@@ -126,4 +126,9 @@ export function getBotMove(fen, diff) {
   return best;
 }
 
-export const diffLabel = (d) => ({ easy: '🟢 Recruit', medium: '🟡 Soldier', hard: '🔴 General', master: '🟣 Warlord' }[d] || d);
+export const diffLabel = (d) => ({
+  beginner:     'Beginner',
+  intermediate: 'Intermediate',
+  hard:         'Hard',
+  veryhard:     'Very Hard',
+}[d] || d);

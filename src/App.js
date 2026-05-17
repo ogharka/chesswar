@@ -47,7 +47,7 @@ export default function App() {
     return (
       <div className="boot-screen">
         <div className="boot-inner">
-          <div className="boot-logo">⚔️</div>
+          <div className="boot-logo">♟♙</div>
           <h1>ChessWar</h1>
           <p>Dominate. Earn. Conquer.</p>
           <div className="boot-bar"><div className="boot-fill" /></div>

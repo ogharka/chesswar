@@ -52,28 +52,28 @@ export default function Dashboard() {
 
           {/* Battle modes */}
           <section className="panel">
-            <div className="panel-head"><h2>⚔️ Enter Battle</h2></div>
+            <div className="panel-head"><h2>Enter Battle</h2></div>
             <div className="battle-grid">
               <button className="battle-card bc-pvp" onClick={() => navigate('/play/pvp')}>
-                <span className="bc-icon">⚔️</span>
+                <span className="bc-icon">♟</span>
                 <strong>PvP Battle</strong>
                 <span>Fight a real opponent</span>
                 <div className="bc-pts">+10 pts</div>
               </button>
               <button className="battle-card bc-bot" onClick={() => navigate('/play/bot')}>
-                <span className="bc-icon">🤖</span>
+                <span className="bc-icon">♙</span>
                 <strong>vs AI</strong>
                 <span>Train your strategy</span>
                 <div className="bc-pts">+10 pts</div>
               </button>
               <button className="battle-card bc-bet" onClick={() => navigate('/play/bet')}>
-                <span className="bc-icon">💰</span>
+                <span className="bc-icon">♜</span>
                 <strong>Bet Battle</strong>
                 <span>USDC wager · Winner takes all</span>
-                <div className="bc-pts fire">🔥 5× pts</div>
+                <div className="bc-pts fire">5× pts</div>
               </button>
               <button className="battle-card bc-tour" onClick={() => navigate('/tournament')}>
-                <span className="bc-icon">🏆</span>
+                <span className="bc-icon">♛</span>
                 <strong>Tournament</strong>
                 <span>5 USDC entry · Prize pool</span>
                 <div className="bc-pts">Glory</div>
@@ -83,14 +83,14 @@ export default function Dashboard() {
 
           {/* Battle history */}
           <section className="panel">
-            <div className="panel-head"><h2>⚔️ Battle Log</h2></div>
+            <div className="panel-head"><h2>Battle Log</h2></div>
             {gameHistory.length === 0 ? (
               <p className="empty-msg">No battles yet — enter the war!</p>
             ) : (
               <div className="game-hist">
                 {gameHistory.slice(0, 8).map((g) => (
                   <div key={g.id} className={`gh-row ${g.result}`}>
-                    <span className="gh-icon">{g.result === 'win' ? '⚔️' : g.result === 'draw' ? '🤝' : '💀'}</span>
+                    <span className="gh-icon">{g.result === 'win' ? '♔' : g.result === 'draw' ? '½' : '♚'}</span>
                     <span className="gh-opp">{g.opponent || 'Unknown'}</span>
                     <span className="gh-mode">{g.mode}</span>
                     <span className="gh-pts">+{g.pointsEarned} pts</span>
@@ -107,7 +107,7 @@ export default function Dashboard() {
           {/* Airdrop */}
           <section className="panel airdrop-panel">
             <div className="ap-badge">INCOMING</div>
-            <h3>CWAR Token Airdrop 🪂</h3>
+            <h3>CWAR Token Airdrop</h3>
             <p><strong>1,000,000,000 CWAR</strong> tokens launching on Base. Your points = your share.</p>
             <div className="ap-bar-row">
               <span>Your points</span><strong className="gold">{points.toLocaleString()}</strong>
@@ -118,13 +118,13 @@ export default function Dashboard() {
 
           {/* Point multipliers */}
           <section className="panel">
-            <div className="panel-head"><h2>⚡ Multipliers</h2></div>
+            <div className="panel-head"><h2>Multipliers</h2></div>
             <div className="mult-list">
               {[
-                { icon: '🎮', label: 'Per battle',        val: '+10 pts',       cls: ''      },
-                { icon: '💰', label: 'Bet battle',        val: '5× boost',      cls: 'fire'  },
-                { icon: '🛡️', label: `NFT (${nfts.length} owned)`, val: `${nftBoost}× all`, cls: 'gold'  },
-                { icon: '👥', label: 'Each recruit',      val: '+1,000 pts',    cls: 'blue'  },
+                { icon: '♟', label: 'Per battle',        val: '+10 pts',       cls: ''      },
+                { icon: '♜', label: 'Bet battle',        val: '5× boost',      cls: 'fire'  },
+                { icon: '♝', label: `NFT (${nfts.length} owned)`, val: `${nftBoost}× all`, cls: 'gold'  },
+                { icon: '♞', label: 'Each recruit',      val: '+1,000 pts',    cls: 'blue'  },
               ].map((m) => (
                 <div key={m.label} className="mult-row">
                   <span>{m.icon}</span>
@@ -138,7 +138,7 @@ export default function Dashboard() {
           {/* NFT boosts */}
           <section className="panel">
             <div className="panel-head">
-              <h2>🛡️ War NFTs</h2>
+              <h2>War NFTs</h2>
               <button className="panel-action" onClick={() => navigate('/profile')}>Mint →</button>
             </div>
             <div className="boost-table">
@@ -160,7 +160,7 @@ export default function Dashboard() {
 
           {/* Referral */}
           <section className="panel">
-            <div className="panel-head"><h2>👥 Recruit & Earn</h2></div>
+            <div className="panel-head"><h2>Recruit & Earn</h2></div>
             <p className="ref-desc">Earn <strong>1,000 war points</strong> for every recruit!</p>
             <div className="ref-link-row">
               <input readOnly value={refLink} className="ref-link-input" />

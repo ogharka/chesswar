@@ -92,15 +92,14 @@ function PromoPicker({ color, onSelect }) {
 
 /* ── Time controls ── */
 const TIME_OPTS = [
-  { label: '1+0',   base: 60,   inc: 0  },
-  { label: '3+2',   base: 180,  inc: 2  },
-  { label: '5+0',   base: 300,  inc: 0  },
-  { label: '5+3',   base: 300,  inc: 3  },
-  { label: '10+0',  base: 600,  inc: 0  },
-  { label: '15+10', base: 900,  inc: 10 },
-  { label: '30+0',  base: 1800, inc: 0  },
+  { label: '1 min',  base: 60,   inc: 0  },
+  { label: '3 min',  base: 180,  inc: 2  },
+  { label: '5 min',  base: 300,  inc: 0  },
+  { label: '7 min',  base: 420,  inc: 0  },
+  { label: '10 min', base: 600,  inc: 0  },
+  { label: '30 min', base: 1800, inc: 0  },
 ];
-const BOT_DIFFS = ['easy', 'medium', 'hard', 'master'];
+const BOT_DIFFS = ['beginner', 'intermediate', 'hard', 'veryhard'];
 const PSYMS = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
 
 export default function GamePage() {
@@ -114,7 +113,7 @@ export default function GamePage() {
   /* config */
   const [configured, setConfigured] = useState(false);
   const [timeOpt,   setTimeOpt]   = useState(TIME_OPTS[2]);
-  const [botDiff,   setBotDiff]   = useState('medium');
+  const [botDiff,   setBotDiff]   = useState('intermediate');
   const [betAmt,    setBetAmt]    = useState('0.10');
   const [betErr,    setBetErr]    = useState('');
   const [soundOn,   setSoundOn]   = useState(true);

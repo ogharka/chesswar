@@ -367,9 +367,9 @@ export default function GamePage() {
             onPieceDrop={onDrop}
             boardOrientation={flipped ? 'black' : 'white'}
             customSquareStyles={hilights}
-            customBoardStyle={{ borderRadius: '4px', boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}
-            customDarkSquareStyle={{ backgroundColor: '#4a1a1a' }}
-            customLightSquareStyle={{ backgroundColor: '#c9a84c' }}
+            customBoardStyle={{ borderRadius: '4px', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}
+            customDarkSquareStyle={{ backgroundColor: '#B58863' }}
+            customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
             areArrowsAllowed
           />
         </div>

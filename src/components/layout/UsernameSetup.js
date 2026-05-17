@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import toast from 'react-hot-toast';
 
-const AVATARS = ['⚔️', '🗡️', '🛡️', '👑', '🏹', '🪖'];
+const AVATARS = ['♟', '🗡️', '🛡️', '👑', '🏹', '🪖'];
 
 export default function UsernameSetup({ onDone }) {
   const { updateProfile, wallet } = useStore();
@@ -36,7 +36,7 @@ export default function UsernameSetup({ onDone }) {
       <div className="username-setup-card">
 
         <div className="us-header">
-          <div className="us-logo">⚔️</div>
+          <div className="us-logo">♟♙</div>
           <h2>Set Your Callsign</h2>
           <p>Choose a name that will appear on the leaderboard and in battles</p>
         </div>

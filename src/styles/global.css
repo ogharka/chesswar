@@ -1074,3 +1074,77 @@ input { font-family: var(--font); }
 .usdc-chip:hover { background: rgba(5,177,105,.15); border-color: var(--green); }
 .usdc-chip-icon  { font-size: 12px; font-weight: 800; }
 .usdc-chip-add   { font-size: 16px; font-weight: 800; opacity: .7; margin-left: 2px; }
+
+/* Empty state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 36px 20px; gap: 8px; text-align: center;
+}
+.empty-piece { font-size: 36px; color: var(--border-dark); opacity: .4; }
+.empty-state p { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+.empty-state span { font-size: 13px; color: var(--text-muted); }
+
+/* Battle log result badge */
+.gh-result-badge {
+  width: 24px; height: 24px; border-radius: 6px;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.gh-row.win  .gh-result-badge { background: var(--green-bg); color: var(--green); }
+.gh-row.loss .gh-result-badge { background: var(--red-bg); color: var(--red); }
+.gh-row.draw .gh-result-badge { background: var(--bg-sunken); color: var(--text-muted); }
+
+/* Mult piece icon */
+.mult-piece { font-size: 18px; color: var(--cb-blue); width: 24px; flex-shrink: 0; }
+
+/* Boost table piece */
+.bt-piece { font-size: 16px; width: 24px; flex-shrink: 0; color: var(--cb-blue); }
+.bt-label { flex: 1; }
+
+/* Panel sub right */
+.panel-sub-right { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+/* ── MOBILE HAMBURGER NAV ── */
+.nav-hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  background: none; border: none; padding: 6px; cursor: pointer;
+}
+.nav-hamburger span {
+  display: block; width: 22px; height: 2px;
+  background: var(--text-primary); border-radius: 2px; transition: all .2s;
+}
+.mobile-nav-menu {
+  display: none; position: fixed; inset: 58px 0 0 0;
+  background: var(--bg-card); z-index: 99; flex-direction: column;
+  padding: 16px; gap: 4px; border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg); overflow-y: auto;
+}
+.mobile-nav-menu.open { display: flex; }
+.mobile-nav-link {
+  padding: 14px 16px; border-radius: var(--radius); font-size: 16px;
+  font-weight: 600; color: var(--text-secondary); text-align: left;
+  transition: all .15s; display: block;
+}
+.mobile-nav-link:hover, .mobile-nav-link.active {
+  background: var(--cb-blue-light); color: var(--cb-blue);
+}
+.mobile-nav-divider { height: 1px; background: var(--border); margin: 8px 0; }
+.mobile-battle-btn {
+  padding: 14px 16px; border-radius: var(--radius); font-size: 16px;
+  font-weight: 700; color: #fff; background: var(--cb-blue);
+  text-align: left; margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .navbar-nav     { display: none; }
+  .nav-hamburger  { display: flex; }
+  .game-layout    { grid-template-columns: 1fr; }
+  .board-col      { width: 100% !important; }
+  .game-sidebar   { flex-direction: row; flex-wrap: wrap; }
+  .move-hist      { flex: 1; min-width: 200px; max-height: 180px; }
+  .stat-grid-6    { grid-template-columns: repeat(2,1fr); }
+  .nft-mint-grid  { grid-template-columns: repeat(2,1fr); }
+  .tourney-grid   { grid-template-columns: 1fr; }
+  .app-main       { padding: 0 16px 48px; }
+  .dash-grid      { grid-template-columns: 1fr; }
+}

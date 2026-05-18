@@ -96,12 +96,12 @@ export default function Dashboard() {
                 className={`battle-card ${m.cls}`}
                 onClick={() => m.mode.startsWith('/') ? navigate(m.mode) : navigate(`/play/${m.mode}`)}
               >
-                <span className="bc-piece">{m.piece}</span>
-                <div className="bc-body">
-                  <strong className="bc-title">{m.title}</strong>
-                  <span className="bc-sub">{m.sub}</span>
+                <div className="bc-top">
+                  <span className="bc-piece">{m.piece}</span>
                   <span className={`bc-tag ${m.tagCls}`}>{m.tag}</span>
                 </div>
+                <strong className="bc-title">{m.title}</strong>
+                <span className="bc-sub">{m.sub}</span>
               </button>
             ))}
           </div>

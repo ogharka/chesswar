@@ -97,7 +97,6 @@ export default function Dashboard() {
                 onClick={() => m.mode.startsWith('/') ? navigate(m.mode) : navigate(`/play/${m.mode}`)}
               >
                 <div className="bc-top">
-                  <span className="bc-piece">{m.piece}</span>
                   <span className={`bc-tag ${m.tagCls}`}>{m.tag}</span>
                 </div>
                 <strong className="bc-title">{m.title}</strong>

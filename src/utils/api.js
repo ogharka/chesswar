@@ -1,5 +1,3 @@
-import { ethers } from 'ethers';
-
 const API_URL = process.env.REACT_APP_API_URL || 'https://chesswar-api.railway.app';
 
 // ── Auth token management ─────────────────────────────────────────────────────

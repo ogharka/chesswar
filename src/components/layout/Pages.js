@@ -12,15 +12,23 @@ const TOURS = [
 
 export function TournamentPage() {
   const { joinedTournaments, joinTournament } = useStore();
-  const [joining, setJoining] = useState(null);
+  const [joining,   setJoining]   = useState(null);
+  const [confirmT,  setConfirmT]  = useState(null); // tournament pending confirmation
 
-  const join = async (t) => {
-    if (t.status === 'full') { toast.error('Battle is full!'); return; }
-    if (joinedTournaments.find((j) => j.id === t.id)) { toast('Already enlisted!'); return; }
+  const handleEnlist = (t) => {
+    if (t.status === 'full') { toast.error('Tournament is full!'); return; }
+    if (joinedTournaments.find((j) => j.id === t.id)) { toast('Already registered!'); return; }
+    setConfirmT(t); // show confirmation modal
+  };
+
+  const confirmJoin = async () => {
+    const t = confirmT;
+    setConfirmT(null);
     setJoining(t.id);
-    await new Promise((r) => setTimeout(r, 1500));
+    // Simulate tx delay — replace with real USDC contract call on deployment
+    await new Promise((r) => setTimeout(r, 1800));
     joinTournament(t.id);
-    toast.success(`Enlisted in "${t.name}"! 5 USDC deducted`);
+    toast.success(`Registered for "${t.name}" — 5 USDC entry confirmed!`);
     setJoining(null);
   };
 
@@ -59,8 +67,8 @@ export function TournamentPage() {
                   <div className="tc-joined-badge">✓ Enlisted</div>
                 ) : (
                   <button className={`tc-join-btn ${t.status === 'full' ? 'tc-full' : ''}`}
-                    onClick={() => join(t)} disabled={joining === t.id || t.status === 'full'}>
-                    {joining === t.id ? 'Processing…' : t.status === 'full' ? 'Battle Full' : 'Enlist · 5 USDC'}
+                    onClick={() => handleEnlist(t)} disabled={joining === t.id || t.status === 'full'}>
+                    {joining === t.id ? 'Processing…' : t.status === 'full' ? 'Full' : 'Register · 5 USDC'}
                   </button>
                 )}
               </div>
@@ -72,12 +80,37 @@ export function TournamentPage() {
         <h3>Rules</h3>
         <ul>
           <li>5 USDC entry locked in Base smart contract</li>
-          <li>Prize: 50% · 30% · 20% to top 3 warriors</li>
+          <li>Prize: 50% · 30% · 20% to top 3 players</li>
           <li>2% platform fee from prize pool</li>
           <li>No-shows forfeit entry — no refund</li>
-          <li>All battles earn war points × your NFT boost</li>
+          <li>All games earn war points × your NFT boost</li>
         </ul>
       </div>
+
+      {/* Confirmation modal */}
+      {confirmT && (
+        <div className="modal-overlay" onClick={() => setConfirmT(null)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Confirm Registration</h3>
+            <p>You are about to register for:</p>
+            <div className="confirm-tour-name">{confirmT.name}</div>
+            <div className="confirm-details">
+              <div className="cd-row"><span>Entry fee</span><strong>5 USDC</strong></div>
+              <div className="cd-row"><span>Prize pool</span><strong>{confirmT.prize} USDC</strong></div>
+              <div className="cd-row"><span>Format</span><strong>{confirmT.format}</strong></div>
+              <div className="cd-row"><span>Time control</span><strong>{confirmT.tc}</strong></div>
+              <div className="cd-row"><span>Starts in</span><strong>{confirmT.starts}</strong></div>
+            </div>
+            <p className="confirm-note">
+              5 USDC will be deducted from your in-app balance and locked in the smart contract until the tournament ends.
+            </p>
+            <div className="confirm-actions">
+              <button className="confirm-cancel" onClick={() => setConfirmT(null)}>Cancel</button>
+              <button className="confirm-ok" onClick={confirmJoin}>Confirm · 5 USDC</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

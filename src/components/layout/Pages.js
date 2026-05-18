@@ -227,34 +227,39 @@ export function ProfilePage() {
   const handleMint = async (tier) => {
     const nftAddress = process.env.REACT_APP_NFT_ADDRESS;
     if (!nftAddress) { toast.error('NFT contract not configured'); return; }
-    if (!wallet?.signer) { toast.error('Connect your wallet first'); return; }
+    if (!window.ethereum) { toast.error('No wallet found — install MetaMask'); return; }
 
     setMinting(tier);
     try {
-      const contract  = new ethers.Contract(nftAddress, NFT_ABI, wallet.signer);
-      const tierIndex = tier - 1; // contract uses 0-indexed tiers
+      // Always get fresh signer from MetaMask
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer   = await provider.getSigner();
+      const contract = new ethers.Contract(nftAddress, NFT_ABI, signer);
+      const tierIndex = tier - 1; // contract is 0-indexed
       const price     = ethers.parseEther(TIER_PRICES[tier]);
 
-      toast('Confirm transaction in MetaMask…', { duration: 5000 });
+      toast('Opening MetaMask…', { duration: 4000 });
       const tx = await contract.mint(tierIndex, { value: price });
-      toast('Transaction submitted — waiting for confirmation…', { duration: 8000 });
+      toast('Minting… please wait', { duration: 10000 });
       await tx.wait();
 
       // Sync boost from chain to backend
       try {
         const result = await syncNFTBoost();
-        // Update local store too
         mintNFT(tier);
-        toast.success(`NFT minted! Boost updated to ${result.boost}×`);
+        toast.success(`Minted! Boost is now ${result.boost}×`);
       } catch {
-        mintNFT(tier); // update local at least
+        mintNFT(tier);
         toast.success('NFT minted successfully!');
       }
     } catch (err) {
-      if (err.code === 4001) {
-        toast.error('Transaction rejected');
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+        toast.error('Transaction cancelled');
+      } else if (err.message?.includes('insufficient funds')) {
+        toast.error('Insufficient ETH for gas');
       } else {
-        toast.error(err.message?.slice(0, 60) || 'Mint failed');
+        console.error('Mint error:', err);
+        toast.error(err.reason || err.message?.slice(0, 80) || 'Mint failed');
       }
     }
     setMinting(null);

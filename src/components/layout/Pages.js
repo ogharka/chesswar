@@ -1,7 +1,23 @@
 // ── Tournament ────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
+import { ethers } from 'ethers';
 import { useStore } from '../../store/useStore';
+import { syncNFTBoost } from '../../utils/api';
 import toast from 'react-hot-toast';
+
+const NFT_ABI = [
+  'function mint(uint8 tierIndex) payable',
+  'function getBoostMultiplier(address) view returns (uint8)',
+  'function balanceOf(address) view returns (uint256)',
+];
+
+// Tier index: 0=Soldier, 1=Knight, 2=Commander, 3=Warlord
+const TIER_PRICES = {
+  1: '0.005', // Soldier
+  2: '0.01',  // Knight
+  3: '0.025', // Commander
+  4: '0.05',  // Warlord
+};
 
 const TOURS = [
   { id: 't1', name: 'Weekly War Open',    entry: 5, prize: 320,  players: 34,  max: 64,  format: 'Swiss 7R',   tc: '3+0', status: 'open', starts: '2h 14m', prizes: [160, 96, 64]   },
@@ -209,10 +225,38 @@ export function ProfilePage() {
   };
 
   const handleMint = async (tier) => {
+    const nftAddress = process.env.REACT_APP_NFT_ADDRESS;
+    if (!nftAddress) { toast.error('NFT contract not configured'); return; }
+    if (!wallet?.signer) { toast.error('Connect your wallet first'); return; }
+
     setMinting(tier);
-    await new Promise((r) => setTimeout(r, 2000));
-    const nft = mintNFT(tier);
-    toast.success(`${nft.sym} ${nft.name} NFT minted! Boost → ${nft.boost}`);
+    try {
+      const contract  = new ethers.Contract(nftAddress, NFT_ABI, wallet.signer);
+      const tierIndex = tier - 1; // contract uses 0-indexed tiers
+      const price     = ethers.parseEther(TIER_PRICES[tier]);
+
+      toast('Confirm transaction in MetaMask…', { duration: 5000 });
+      const tx = await contract.mint(tierIndex, { value: price });
+      toast('Transaction submitted — waiting for confirmation…', { duration: 8000 });
+      await tx.wait();
+
+      // Sync boost from chain to backend
+      try {
+        const result = await syncNFTBoost();
+        // Update local store too
+        mintNFT(tier);
+        toast.success(`NFT minted! Boost updated to ${result.boost}×`);
+      } catch {
+        mintNFT(tier); // update local at least
+        toast.success('NFT minted successfully!');
+      }
+    } catch (err) {
+      if (err.code === 4001) {
+        toast.error('Transaction rejected');
+      } else {
+        toast.error(err.message?.slice(0, 60) || 'Mint failed');
+      }
+    }
     setMinting(null);
   };
 

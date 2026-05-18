@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { shortAddr, explorerUrl, getUSDCBalance } from '../../utils/wallet';
+import { shortAddr, explorerUrl } from '../../utils/wallet';
 import WalletModal from './WalletModal';
 import toast from 'react-hot-toast';
 
 export default function Navbar() {
-  const { wallet, provider, disconnect, points, nftBoost, profile, claimReferral } = useStore();
+  const { wallet, disconnect, points, nftBoost, profile, claimReferral } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen,    setMenuOpen]    = useState(false);

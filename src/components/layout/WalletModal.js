@@ -7,7 +7,7 @@ const QUICK_AMOUNTS = [5, 10, 25, 50, 100];
 const TABS = ['deposit', 'withdraw', 'history'];
 
 export default function WalletModal({ onClose }) {
-  const { wallet, provider, profile } = useStore();
+  const { wallet, provider } = useStore();
 
   const [tab,          setTab]         = useState('deposit');
   const [usdcBal,      setUsdcBal]     = useState(null);
@@ -23,7 +23,7 @@ export default function WalletModal({ onClose }) {
   useEffect(() => {
     if (!wallet?.address || !provider) return;
     loadBalances();
-  }, [wallet?.address, provider]);
+  }, [wallet?.address, provider]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBalances = async () => {
     const [usdc, eth] = await Promise.all([

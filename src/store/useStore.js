@@ -45,6 +45,8 @@ export const useStore = create(
       pointsLog: [],
       nfts: [],
       nftBoost: 1,
+      setPoints: (p) => set({ points: p }),
+      setNftBoost: (b) => set({ nftBoost: b }),
 
       addPoints: (base, reason, isBet) => {
         const s = get();
@@ -61,10 +63,10 @@ export const useStore = create(
 
       mintNFT: (tier) => {
         const tiers = {
-          1: { name: 'Soldier',  symbol: '⚔️',  boost: 2, price: '0.005 ETH' },
-          2: { name: 'Knight',   symbol: '🗡️',  boost: 3, price: '0.01 ETH'  },
-          3: { name: 'Commander',symbol: '🛡️',  boost: 4, price: '0.025 ETH' },
-          4: { name: 'Warlord',  symbol: '👑',  boost: 5, price: '0.05 ETH'  },
+          1: { name: 'Soldier',  symbol: '♟',  boost: 2, price: '0.005 ETH' },
+          2: { name: 'Knight',   symbol: '♞',  boost: 3, price: '0.01 ETH'  },
+          3: { name: 'Commander',symbol: '♝',  boost: 4, price: '0.025 ETH' },
+          4: { name: 'Warlord',  symbol: '♛',  boost: 5, price: '0.05 ETH'  },
         };
         const t = tiers[tier];
         if (!t) return null;

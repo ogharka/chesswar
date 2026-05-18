@@ -664,9 +664,9 @@ input { font-family: var(--font); }
   border-radius: var(--radius-lg); padding: 22px;
 }
 .tourney-rules h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-.tourney-rules ul { display: flex; flex-direction: column; gap: 8px; }
-.tourney-rules li { font-size: 13px; color: var(--text-secondary); padding-left: 14px; position: relative; }
-.tourney-rules li::before { content: '—'; position: absolute; left: 0; color: var(--cb-blue); }
+.tourney-rules ul { display: flex; flex-direction: column; gap: 8px; list-style: none; padding: 0; }
+.tourney-rules li { font-size: 13px; color: var(--text-secondary); padding-left: 0; list-style: none; }
+.tourney-rules li::before { display: none; }
 .airdrop-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   background: linear-gradient(135deg, var(--bg-card), var(--cb-blue-light));

@@ -25,7 +25,7 @@ const NFT_ABI = [
 const TIER_PRICES = { 1:'0.005', 2:'0.01', 3:'0.025', 4:'0.05' };
 
 export default function ProfilePage() {
-  const { wallet, profile, updateProfile, nfts, mintNFT, points, nftBoost, setNftBoost, pointsLog } = useStore();
+  const { wallet, profile, updateProfile, nfts, mintNFT, points, nftBoost, setNftBoost, pointsLog, disconnect } = useStore();
   const [editing,      setEditing]      = useState(false);
   const [nameVal,      setNameVal]      = useState(profile.username || '');
   const [minting,      setMinting]      = useState(null);
@@ -65,6 +65,23 @@ export default function ProfilePage() {
     setMinting(tier);
     try {
       const provider  = new ethers.BrowserProvider(window.ethereum);
+
+      // Check network - must be Base Sepolia (84532)
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
+      if (chainId !== 84532) {
+        toast.error('Switch to Base Sepolia testnet in MetaMask');
+        setMinting(null);
+        // Try to switch network
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x14A34' }], // 84532 in hex
+          });
+        } catch {}
+        return;
+      }
+
       const signer    = await provider.getSigner();
       const contract  = new ethers.Contract(nftAddress, NFT_ABI, signer);
       const price     = ethers.parseEther(TIER_PRICES[tier]);
@@ -201,6 +218,20 @@ export default function ProfilePage() {
           <div className="ad-pts">{points.toLocaleString()}</div>
           <div className="ad-pts-label">Your war points</div>
         </div>
+      </div>
+
+      {/* Disconnect */}
+      <div className="more-section">
+        <button
+          onClick={() => { disconnect(); window.location.reload(); }}
+          style={{
+            width:'100%', padding:'14px', borderRadius:'var(--radius-m)',
+            background:'#FEE2E2', color:'var(--red)', fontWeight:700,
+            fontSize:'15px', transition:'all .15s'
+          }}
+        >
+          Disconnect Wallet
+        </button>
       </div>
 
       {/* Points log */}

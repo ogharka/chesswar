@@ -19,7 +19,7 @@ export default function Dashboard() {
   const { points, nftBoost, profile, gameHistory } = useStore();
 
   const [selTime,    setSelTime]    = useState(5);
-  const [mode,       setMode]       = useState('bot'); // bot | bet | pvp
+  const [mode,       setMode]       = useState('bot'); // bot | bet | pvp | pvp-free
   const [betAmt,     setBetAmt]     = useState('0.10');
   const [searching,  setSearching]  = useState(false);
 
@@ -27,8 +27,8 @@ export default function Dashboard() {
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
 
   const handlePlay = () => {
-    if (mode === 'pvp') {
-      toast('PvP matchmaking coming soon!', { icon: '⚔️' });
+    if (mode === 'pvp-match' || mode === 'pvp-friend' || mode === 'pvp-free') {
+      toast('Coming soon! We are building this feature.', { icon: '🔨' });
       return;
     }
     navigate(`/play/${mode}`, { state: { timeControl: selTime, betAmount: betAmt } });
@@ -60,6 +60,23 @@ export default function Dashboard() {
         <div className="section-title">Mode</div>
         <div className="mode-grid">
           <div
+            className={`mode-card ${mode === 'pvp-free' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-free')}
+            style={mode === 'pvp-free' ? {borderColor:'var(--purple)',background:'linear-gradient(135deg,#fff 60%,#F5F3FF)'} : {}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-free'?'var(--purple)':'var(--t2)'} strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="mc-title">Play Online</div>
+            <div className="mc-sub">Free PvP · coming soon</div>
+            <span className="mc-tag" style={{background:'#F5F3FF',color:'var(--purple)'}}>Free</span>
+          </div>
+          <div
             className={`mode-card bot ${mode === 'bot' ? 'active' : ''}`}
             onClick={() => setMode('bot')}
             style={mode === 'bot' ? { borderColor: 'var(--green)', background: 'linear-gradient(135deg,#fff 60%,#E6F9F1)' } : {}}
@@ -90,6 +107,39 @@ export default function Dashboard() {
             <div className="mc-title">Bet Battle</div>
             <div className="mc-sub">Wager USDC, win more</div>
             <span className="mc-tag fire">5× Points</span>
+          </div>
+
+          <div
+            className={`mode-card ${mode === 'pvp-match' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-match')}
+            style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="mc-title" style={{color:'var(--t3)'}}>Play Online</div>
+            <div className="mc-sub" style={{color:'var(--t3)'}}>Match with players</div>
+            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
+          </div>
+
+          <div
+            className={`mode-card ${mode === 'pvp-friend' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-friend')}
+            style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <div className="mc-title" style={{color:'var(--t3)'}}>Play with Friend</div>
+            <div className="mc-sub" style={{color:'var(--t3)'}}>Share invite link</div>
+            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
           </div>
         </div>
       </div>
@@ -156,7 +206,7 @@ export default function Dashboard() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            {mode === 'bot' ? 'Play vs Computer' : mode === 'bet' ? `Bet ${betAmt} USDC` : 'Find Opponent'}
+            {mode === 'bot' ? 'Play vs Computer' : mode === 'bet' ? `Bet ${betAmt} USDC` : 'Coming Soon'}
           </>
         )}
       </button>

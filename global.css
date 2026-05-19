@@ -1467,3 +1467,37 @@ a { color: inherit; text-decoration: none; }
 .wm-tx-amount.deposit  { color: var(--green); }
 .wm-tx-amount.withdraw { color: var(--red); }
 .wm-tx-link { font-size: 11px; color: var(--blue); }
+
+/* ── Address chip + disconnect menu ── */
+.tb-addr {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 20px;
+  background: var(--raised); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--t2);
+  font-family: var(--mono); transition: all .15s;
+}
+.tb-addr:hover { background: var(--border); }
+.tb-addr-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+.tb-disconnect-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-m); box-shadow: var(--shadow-l);
+  overflow: hidden; z-index: 200; min-width: 180px;
+  animation: menu-in .15s ease;
+}
+.tb-disconnect-menu button {
+  display: block; width: 100%; padding: 13px 16px;
+  font-size: 14px; font-weight: 500; color: var(--t1);
+  text-align: left; transition: background .1s;
+  border-bottom: 1px solid var(--border);
+}
+.tb-disconnect-menu button:last-child { border-bottom: none; }
+.tb-disconnect-menu button:hover { background: var(--raised); }
+.tb-disconnect-btn { color: var(--red) !important; font-weight: 700 !important; }
+@keyframes menu-in {
+  from { opacity:0; transform: translateY(-6px); }
+  to   { opacity:1; transform: translateY(0); }
+}

@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { ethers } from 'ethers';
 import WalletModal from './WalletModal';
+
+const USDC_ABI = ['function balanceOf(address) view returns (uint256)'];
+const USDC_ADDR = process.env.REACT_APP_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
 
 // SVG Tab Icons
 const PlayIcon = ({ active }) => (
@@ -35,8 +39,23 @@ const MoreIcon = ({ active }) => (
 export default function Navbar() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { points, nftBoost, profile } = useStore();
-  const [showWallet, setShowWallet] = useState(false);
+  const { points, nftBoost, profile, wallet, disconnect } = useStore();
+  const [showWallet,   setShowWallet]   = useState(false);
+  const [usdcBal,      setUsdcBal]      = useState('0.00');
+  const [showDisconnect, setShowDisconnect] = useState(false);
+
+  useEffect(() => {
+    if (!wallet?.address || !window.ethereum) return;
+    const load = async () => {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(USDC_ADDR, USDC_ABI, provider);
+        const bal = await contract.balanceOf(wallet.address);
+        setUsdcBal(parseFloat(ethers.formatUnits(bal, 6)).toFixed(2));
+      } catch { setUsdcBal('0.00'); }
+    };
+    load();
+  }, [wallet?.address]);
 
   const path = location.pathname;
 
@@ -66,12 +85,33 @@ export default function Navbar() {
             <span className="tb-boost">{nftBoost}×</span>
           </button>
           <button className="tb-chip tb-wallet" onClick={() => setShowWallet(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <rect x="2" y="5" width="20" height="14" rx="2"/>
-              <path d="M16 12h2"/>
-            </svg>
-            <span>Wallet</span>
+            <span style={{color:'var(--green)',fontWeight:700}}>$</span>
+            <span>{usdcBal}</span>
           </button>
+          {wallet && (
+            <div style={{position:'relative'}}>
+              <button
+                className="tb-addr"
+                onClick={() => setShowDisconnect(v => !v)}
+              >
+                <span className="tb-addr-dot" />
+                <span>{wallet.address.slice(0,4)}...{wallet.address.slice(-4)}</span>
+              </button>
+              {showDisconnect && (
+                <div className="tb-disconnect-menu">
+                  <button onClick={() => { setShowWallet(true); setShowDisconnect(false); }}>
+                    Deposit / Withdraw
+                  </button>
+                  <button
+                    className="tb-disconnect-btn"
+                    onClick={() => { disconnect(); window.location.reload(); }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

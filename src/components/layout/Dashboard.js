@@ -25,10 +25,26 @@ export default function Dashboard() {
 
   const BATTLE_MODES = [
     {
+      mode: 'pvp',
+      cls: 'bc-pvp',
+      title: 'Play Online',
+      sub: 'Challenge a real player',
+      tag: '+10 pts',
+      tagCls: '',
+    },
+    {
+      mode: 'bot',
+      cls: 'bc-bot',
+      title: 'Play vs Computer',
+      sub: 'Beginner · Intermediate · Hard · Very Hard',
+      tag: '+10 pts',
+      tagCls: '',
+    },
+    {
       mode: 'bet',
       cls: 'bc-bet',
       title: 'Bet Battle',
-      sub: 'Wager USDC against a real opponent — winner takes all',
+      sub: 'Wager USDC — winner takes all',
       tag: '5× Points',
       tagCls: 'fire',
     },

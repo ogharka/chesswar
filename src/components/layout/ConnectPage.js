@@ -32,12 +32,12 @@ export default function ConnectPage() {
   };
 
   const features = [
+    { icon: '♟', title: 'Play Online',     sub: 'Challenge real players'        },
+    { icon: '♙', title: 'vs Computer',     sub: 'Beginner to Very Hard'         },
     { icon: '♜', title: 'Bet Battle',      sub: 'USDC wager · winner takes all' },
-    { icon: '♛', title: 'Tournament',      sub: '5 USDC entry · prize pool'     },
-    { icon: '★', title: 'Earn Points',     sub: '5× boost on every bet'         },
+    { icon: '★', title: 'Earn Points',     sub: '5× boost on bet games'         },
     { icon: '♝', title: 'War NFTs',        sub: 'Up to 5× point multiplier'     },
-    { icon: '♞', title: 'Referrals',       sub: '+1,000 points per recruit'     },
-    { icon: '♟', title: 'CWAR Airdrop',    sub: '1B tokens · top earners win'   },
+    { icon: '♛', title: 'CWAR Airdrop',    sub: '1B tokens · top earners win'   },
   ];
 
   return (

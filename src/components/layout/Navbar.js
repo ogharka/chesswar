@@ -60,8 +60,9 @@ export default function Navbar() {
   ];
 
   const battles = [
-    { mode: 'bet',         label: 'Bet Battle',   sub: 'USDC wager · winner takes all' },
-    { mode: '/tournament', label: 'Tournament',   sub: '5 USDC entry · prize pool'     },
+    { mode: 'pvp', label: 'Play Online',  sub: 'Challenge a real player'       },
+    { mode: 'bot', label: 'vs Computer',  sub: 'Beginner to Very Hard'         },
+    { mode: 'bet', label: 'Bet Battle',   sub: 'USDC wager · 5× points'        },
   ];
 
   return (

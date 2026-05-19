@@ -4,6 +4,7 @@ import { Chess } from 'chess.js';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 
+import { getBotMove, diffLabel } from '../../utils/chessBot';
 import toast from 'react-hot-toast';
 
 /* ── Sound ── */
@@ -91,6 +92,7 @@ function PromoPicker({ color, onSelect }) {
 }
 
 /* ── Time controls ── */
+const BOT_DIFFS = ['beginner', 'intermediate', 'hard', 'veryhard'];
 const TIME_OPTS = [
   { label: '1 min',  base: 60,   inc: 0  },
   { label: '3 min',  base: 180,  inc: 2  },
@@ -115,6 +117,7 @@ export default function GamePage() {
 
   const [betAmt,    setBetAmt]    = useState('0.10');
   const [betErr,    setBetErr]    = useState('');
+  const [botDiff,   setBotDiff]   = useState('intermediate');
   const [soundOn,   setSoundOn]   = useState(true);
 
   /* game */
@@ -156,7 +159,6 @@ export default function GamePage() {
       gamesWon:    won  ? profile.gamesWon  + 1 : profile.gamesWon,
       gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
-      ...(isBet && { betGamesPlayed: (profile.betGamesPlayed || 0) + 1 }),
     });
     addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
@@ -182,6 +184,17 @@ export default function GamePage() {
     if (chess.isCheck())     { sfx('check'); toast('⚠️ Check!', { duration: 1000 }); }
     return true;
   }, [endGame, sfx, timeOpt.inc]);
+
+  /* bot */
+  useEffect(() => {
+    if (!started || over || !isBot || chessRef.current.turn() !== 'b') return;
+    const delay = botDiff === 'beginner' ? 400 : botDiff === 'intermediate' ? 700 : 1000;
+    const tid = setTimeout(() => {
+      const mv = getBotMove(chessRef.current.fen(), botDiff);
+      if (mv) applyMove(mv);
+    }, delay + Math.random() * 300);
+    return () => clearTimeout(tid);
+  }, [fen, started, over, isBot, botDiff, applyMove]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* timer */
   useEffect(() => {
@@ -292,10 +305,24 @@ export default function GamePage() {
         <div className="config-card">
           <button className="config-back" onClick={() => navigate('/')}>← Back</button>
           <h2 className="config-title">
-            Bet Battle
+            {isBot ? 'vs Computer' : isBet ? 'Bet Battle' : 'Play Online'}
           </h2>
 
 
+
+          {isBot && (
+            <div className="config-group">
+              <label>Difficulty</label>
+              <div className="diff-grid">
+                {BOT_DIFFS.map((d) => (
+                  <button key={d} className={`diff-btn ${botDiff === d ? 'active' : ''}`}
+                    onClick={() => setBotDiff(d)}>
+                    {diffLabel(d)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="config-group">
             <label>Battle Timer</label>
@@ -351,6 +378,7 @@ export default function GamePage() {
 
   /* ── Game screen ── */
   return (
+    <>
     <div className="cw-game">
 
       <div className="cw-main">
@@ -362,7 +390,7 @@ export default function GamePage() {
             <div className="cwp-left">
               <div className="cwp-avatar">'♟'</div>
               <div className="cwp-info">
-                <span className="cwp-name">'Opponent'</span>
+                <span className="cwp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</span>
                 
                 <span className="cwp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</span>
               </div>
@@ -454,7 +482,7 @@ export default function GamePage() {
       {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
     </div>
 
-      {over && (
+    {over && (
         <div className="game-over-overlay">
           <div className="go-modal">
             <div className={`go-banner ${over.winner === 'w' ? 'go-win' : over.winner === 'd' ? 'go-draw' : 'go-loss'}`}>
@@ -488,6 +516,7 @@ export default function GamePage() {
             </div>
           </div>
         </div>
-      )}
+    )}
+    </>
   );
 }

@@ -90,7 +90,7 @@ export default function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/play/bet" element={<GamePage />} />
+            <Route path="/play/:mode" element={<GamePage />} />
             <Route path="/tournament" element={<TournamentPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />

@@ -162,7 +162,7 @@ export default function GamePage() {
     addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isBot ? `AI (${botDiff})` : 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
     if (won) sfx('win'); else if (!draw) sfx('loss');
-    toast(won ? 'Victory!' : draw ? '= Draw!' : '✕ Defeated!', { duration: 3000 });
+    toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
   }, [addPoints, addGameResult, betAmt, botDiff, isBet, isBot, mode, profile, sfx, updateProfile]);
 
   /* apply move */
@@ -266,20 +266,18 @@ export default function GamePage() {
   };
 
   const rematch = () => { reset(); setStarted(true); };
-  const resign  = () => {
+  const resign = () => {
     if (!started || over) return;
-    if (window.confirm('Resign this game?')) endGame('b', 'resignation');
+    endGame('b', 'resignation');
   };
 
   const abort = () => {
     if (!started || over) return;
-    if (moves.length > 1) { toast.error('Cannot abort after 2 moves'); return; }
-    if (window.confirm('Abort game?')) {
-      clearInterval(timerRef.current);
-      overRef.current = true;
-      setOver({ winner: null, reason: 'aborted', earned: 0 });
-      toast('Game aborted');
-    }
+    if (moves.length > 1) { toast.error('Cannot abort after move 2'); return; }
+    clearInterval(timerRef.current);
+    overRef.current = true;
+    setOver({ winner: null, reason: 'aborted', earned: 0 });
+    toast('Game aborted');
   };
 
   const offerDraw = () => {
@@ -342,7 +340,7 @@ export default function GamePage() {
           <div className="config-group config-inline">
             <label>Sound</label>
             <button className={`sound-toggle ${soundOn ? 'on' : 'off'}`} onClick={() => setSoundOn((s) => !s)}>
-              {soundOn ? '🔊 On' : '🔇 Off'}
+              {soundOn ? 'Sound On' : 'Sound Off'}
             </button>
           </div>
 
@@ -490,7 +488,7 @@ export default function GamePage() {
           <div className="go-modal">
             <div className={`go-banner ${over.winner === 'w' ? 'go-win' : over.winner === 'd' ? 'go-draw' : 'go-loss'}`}>
               <div className="go-title">
-                {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? '= Draw' : '✕ Defeated'}
+                {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? 'Draw' : 'Defeated'}
               </div>
               <div className="go-reason">
                 {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate — enemy king falls!' : 'Your king has fallen')}
@@ -513,9 +511,9 @@ export default function GamePage() {
               {isBet && <div className="go-row"><span>Bet boost</span><strong className="fire">× 5× applied</strong></div>}
             </div>
             <div className="go-actions">
-              <button className="go-btn go-rematch" onClick={rematch}>🔄 Rematch</button>
-              <button className="go-btn" onClick={exportPGN}>📋 PGN</button>
-              <button className="go-btn go-home" onClick={() => navigate('/')}>🏠 Home</button>
+              <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
+              <button className="go-btn" onClick={exportPGN}>PGN</button>
+              <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
             </div>
           </div>
         </div>

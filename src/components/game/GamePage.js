@@ -482,7 +482,6 @@ export default function GamePage() {
         </div>
       </div>
 
-      </div>
       {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
 
       {/* Game over */}

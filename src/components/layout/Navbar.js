@@ -99,7 +99,7 @@ export default function Navbar() {
                   <button onClick={() => { setShowWallet(true); setShowDisconnect(false); }}>
                     Deposit / Withdraw
                   </button>
-                  <button className="tb-disconnect-btn" onClick={() => { disconnect(); window.location.reload(); }}>
+                  <button className="tb-disconnect-btn" onClick={() => { localStorage.setItem("cw_just_disconnected","1"); disconnect(); window.location.href = "/"; }}>
                     Disconnect
                   </button>
                 </div>

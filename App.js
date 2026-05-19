@@ -9,7 +9,6 @@ import ConnectPage   from './components/layout/ConnectPage';
 import UsernameSetup from './components/layout/UsernameSetup';
 import Dashboard     from './components/layout/Dashboard';
 import GamePage      from './components/game/GamePage';
-import MorePage      from './components/layout/MorePage';
 import TournamentPage from './components/layout/TournamentPage';
 import LeaderboardPage from './components/layout/LeaderboardPage';
 import ProfilePage from './components/layout/ProfilePage';
@@ -85,7 +84,6 @@ export default function App() {
             <Route path="/play/:mode"   element={<GamePage />} />
             <Route path="/tournament"   element={<TournamentPage />} />
             <Route path="/leaderboard"  element={<LeaderboardPage />} />
-            <Route path="/more"         element={<MorePage />} />
             <Route path="*"             element={<Navigate to="/" replace />} />
           </Routes>
         </main>

@@ -108,8 +108,6 @@ export default function GamePage() {
   const { addPoints, updateProfile, profile, addGameResult, nftBoost } = useStore();
 
   const isBet = mode === 'bet';
-  const isBot  = false;
-  const isBot = mode === 'bot';
 
   /* config */
   const [configured, setConfigured] = useState(false);
@@ -135,7 +133,7 @@ export default function GamePage() {
   const [over,      setOver]     = useState(null);
   const [selected,  setSelected] = useState(null);
   const [hilights,  setHilights] = useState({});
-  const [thinking,  setThinking] = useState(false);
+
   const [flipped,   setFlipped]  = useState(false);
   const [capW,      setCapW]     = useState([]);
   const [capB,      setCapB]     = useState([]);
@@ -160,11 +158,11 @@ export default function GamePage() {
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
       ...(isBet && { betGamesPlayed: (profile.betGamesPlayed || 0) + 1 }),
     });
-    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isBot ? `AI (${botDiff})` : 'Opponent', pointsEarned: earned });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
-  }, [addPoints, addGameResult, betAmt, botDiff, isBet, isBot, mode, profile, sfx, updateProfile]);
+  }, [addPoints, addGameResult, betAmt, isBet, mode, profile, sfx, updateProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* apply move */
   const applyMove = useCallback((mv) => {
@@ -196,18 +194,7 @@ export default function GamePage() {
     return () => clearInterval(timerRef.current);
   }, [started, over, endGame]);
 
-  /* bot */
-  useEffect(() => {
-    if (!started || over || !isBot || chessRef.current.turn() !== 'b') return;
-    setThinking(true);
-    const delay = botDiff === 'easy' ? 300 : botDiff === 'medium' ? 600 : 1000;
-    const tid = setTimeout(() => {
-      const mv = getBotMove(chessRef.current.fen(), botDiff);
-      if (mv) applyMove(mv);
-      setThinking(false);
-    }, delay + Math.random() * 300);
-    return () => clearTimeout(tid);
-  }, [fen, started, over, isBot, botDiff, applyMove]);
+ // eslint-disable-line react-hooks/exhaustive-deps
 
   /* promotion */
   const isPromo = (from, to) => {
@@ -217,7 +204,7 @@ export default function GamePage() {
 
   /* click */
   const onSquareClick = (sq) => {
-    if (!started || over || thinking || (isBot && chessRef.current.turn() === 'b') || promo) return;
+    if (!started || over || promo) return;
     const chess = chessRef.current, piece = chess.get(sq);
     if (!selected) {
       if (piece && piece.color === chess.turn()) {
@@ -246,7 +233,7 @@ export default function GamePage() {
   };
 
   const onDrop = (from, to) => {
-    if (!started || over || thinking || (isBot && chessRef.current.turn() === 'b')) return false;
+    if (!started || over) return false;
     if (isPromo(from, to)) { setPromo({ from, to }); return false; }
     return applyMove({ from, to, promotion: 'q' });
   };
@@ -258,7 +245,7 @@ export default function GamePage() {
   const reset = () => {
     chessRef.current.reset(); overRef.current = false;
     setFen(chessRef.current.fen()); setMoves([]); setWTime(timeOpt.base); setBTime(timeOpt.base);
-    setTurn('w'); setOver(null); setSelected(null); setHilights({}); setCapW([]); setCapB([]); setThinking(false); setPromo(null);
+    setTurn('w'); setOver(null); setSelected(null); setHilights({}); setCapW([]); setCapB([]);  setPromo(null);
   };
 
   const startGame = () => {
@@ -287,13 +274,7 @@ export default function GamePage() {
     toast('Draw offered — waiting for opponent', { duration: 3000 });
     // In PvP this would send via WebSocket
     // vs bot — bot accepts/declines randomly
-    if (isBot) {
-      setTimeout(() => {
-        const accepts = Math.random() > 0.6;
-        if (accepts) { endGame('d', 'draw'); toast('Bot accepted the draw'); }
-        else { setDrawOffer(false); toast('Bot declined the draw'); }
-      }, 1500);
-    }
+
   };
 
   const shareGame = () => {
@@ -311,7 +292,7 @@ export default function GamePage() {
         <div className="config-card">
           <button className="config-back" onClick={() => navigate('/')}>← Back</button>
           <h2 className="config-title">
-            {isBot ? '◈ Battle vs AI' : isBet ? 'Bet Battle' : 'PvP Battle'}
+            Bet Battle
           </h2>
 
 
@@ -379,10 +360,10 @@ export default function GamePage() {
           {/* Opponent row */}
           <div className="cw-player">
             <div className="cwp-left">
-              <div className="cwp-avatar">{isBot ? '♚' : '♟'}</div>
+              <div className="cwp-avatar">'♟'</div>
               <div className="cwp-info">
-                <span className="cwp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</span>
-                {thinking && <span className="cwp-thinking">thinking...</span>}
+                <span className="cwp-name">'Opponent'</span>
+                
                 <span className="cwp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</span>
               </div>
             </div>

@@ -44,6 +44,13 @@ export default function Navbar() {
   const [showDisconnect, setShowDisconnect] = useState(false);
 
   useEffect(() => {
+    if (!showDisconnect) return;
+    const handler = () => setShowDisconnect(false);
+    setTimeout(() => document.addEventListener('click', handler), 0);
+    return () => document.removeEventListener('click', handler);
+  }, [showDisconnect]);
+
+  useEffect(() => {
     if (!wallet?.address || !window.ethereum) return;
     const load = async () => {
       try {

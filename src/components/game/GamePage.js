@@ -110,7 +110,6 @@ export default function GamePage() {
   const { addPoints, updateProfile, profile, addGameResult, nftBoost } = useStore();
 
   const isBet = mode === 'bet';
-  const isBot  = mode === 'bot';
 
   /* config */
   const [configured, setConfigured] = useState(false);

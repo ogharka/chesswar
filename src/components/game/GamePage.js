@@ -111,6 +111,7 @@ export default function GamePage() {
 
   const isBet = mode === 'bet';
   const isBot  = mode === 'bot';
+  const isBot  = mode === 'bot';
 
   /* config */
   const [configured, setConfigured] = useState(false);

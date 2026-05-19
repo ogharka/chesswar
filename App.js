@@ -55,9 +55,12 @@ export default function App() {
     tryReconnect();
   }, []); // eslint-disable-line
 
+  // Username setup shown only once on first connect
   useEffect(() => {
-    if (wallet && !profile.username) setShowUsername(true);
-  }, [wallet, profile.username]);
+    if (wallet && !profile.username && !localStorage.getItem('cw_username_skipped')) {
+      setShowUsername(true);
+    }
+  }, [wallet]); // eslint-disable-line
 
   if (booting) return (
     <div className="boot-screen">
@@ -84,6 +87,7 @@ export default function App() {
             <Route path="/play/:mode"   element={<GamePage />} />
             <Route path="/tournament"   element={<TournamentPage />} />
             <Route path="/leaderboard"  element={<LeaderboardPage />} />
+            <Route path="/profile"       element={<ProfilePage />} />
             <Route path="*"             element={<Navigate to="/" replace />} />
           </Routes>
         </main>

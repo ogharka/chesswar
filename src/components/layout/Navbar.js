@@ -1,195 +1,95 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { shortAddr, explorerUrl } from '../../utils/wallet';
 import WalletModal from './WalletModal';
-import toast from 'react-hot-toast';
+
+// SVG Tab Icons
+const PlayIcon = ({ active }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
+    <rect x="2" y="2" width="9" height="9" rx="2"/>
+    <rect x="13" y="2" width="9" height="9" rx="2"/>
+    <rect x="2" y="13" width="9" height="9" rx="2"/>
+    <rect x="13" y="13" width="9" height="9" rx="2"/>
+  </svg>
+);
+const CompeteIcon = ({ active }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
+    <path d="M8 21h8M12 21v-4"/>
+    <path d="M7 4H4v6a8 8 0 0 0 16 0V4h-3"/>
+    <path d="M7 4h10"/>
+  </svg>
+);
+const RanksIcon = ({ active }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
+    <line x1="18" y1="20" x2="18" y2="10"/>
+    <line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6"  y1="20" x2="6"  y2="14"/>
+  </svg>
+);
+const MoreIcon = ({ active }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
+    <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+  </svg>
+);
 
 export default function Navbar() {
-  const { wallet, disconnect, points, nftBoost, profile, claimReferral } = useStore();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [menuOpen,    setMenuOpen]    = useState(false);
-  const [playOpen,    setPlayOpen]    = useState(false);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
-  const [walletOpen,  setWalletOpen]  = useState(false);
-  const [platformBal, setPlatformBal] = useState('0.00');
-  const menuRef = useRef(null);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { points, nftBoost, profile } = useStore();
+  const [showWallet, setShowWallet] = useState(false);
 
-  useEffect(() => {
-    const h = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
+  const path = location.pathname;
 
-  useEffect(() => {
-    if (!wallet?.address) return;
-    const stored = localStorage.getItem(`cw_balance_${wallet.address}`) || '0.00';
-    setPlatformBal(stored);
-  }, [wallet?.address]);
-
-  // Close mobile menu on route change
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
-
-  const handleWalletClose = () => {
-    setWalletOpen(false);
-    if (wallet?.address) {
-      const stored = localStorage.getItem(`cw_balance_${wallet.address}`) || '0.00';
-      setPlatformBal(stored);
-    }
-  };
-
-  useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get('ref');
-    if (ref && wallet?.address && ref !== profile.referralCode) {
-      const ok = claimReferral(ref.toUpperCase());
-      if (ok) {
-        window.history.replaceState({}, '', window.location.pathname);
-        toast.success('Referral bonus: +1,000 points!');
-      }
-    }
-  }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const navLinks = [
-    { path: '/',            label: 'Home'         },
-    { path: '/tournament',  label: 'Tournaments'  },
-    { path: '/leaderboard', label: 'Leaderboard'  },
-    { path: '/profile',     label: 'Profile'      },
+  const tabs = [
+    { path: '/',            label: 'Play',    Icon: PlayIcon    },
+    { path: '/tournament',  label: 'Compete', Icon: CompeteIcon },
+    { path: '/leaderboard', label: 'Ranks',   Icon: RanksIcon   },
+    { path: '/profile',     label: 'More',    Icon: MoreIcon    },
   ];
 
-  const battles = [
-    { mode: 'pvp', label: 'Play Online',  sub: 'Challenge a real player'       },
-    { mode: 'bot', label: 'vs Computer',  sub: 'Beginner to Very Hard'         },
-    { mode: 'bet', label: 'Bet Battle',   sub: 'USDC wager · 5× points'        },
-  ];
+  const initial = profile.username
+    ? profile.username[0].toUpperCase()
+    : '?';
 
   return (
     <>
-      <header className="navbar">
-        <div className="navbar-inner">
-
-          {/* Brand */}
-          <Link to="/" className="navbar-brand">
-            <span className="brand-icon">♟♙</span>
-            <span className="brand-text">Chess<span>War</span></span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="navbar-nav">
-            {navLinks.map((n) => (
-              <Link key={n.path} to={n.path}
-                className={`nav-link ${location.pathname === n.path ? 'active' : ''}`}>
-                {n.label}
-              </Link>
-            ))}
-            <div className="nav-play-wrap">
-              <button className="nav-battle-btn" onClick={() => setPlayOpen((p) => !p)}>
-                Battle ▾
-              </button>
-              {playOpen && (
-                <div className="nav-play-dropdown" onMouseLeave={() => setPlayOpen(false)}>
-                  {battles.map((b) => (
-                    <button key={b.mode} className="play-dropdown-item"
-                      onClick={() => { b.mode.startsWith('/') ? navigate(b.mode) : navigate(`/play/${b.mode}`); setPlayOpen(false); }}>
-                      <span className="pdi-label">{b.label}</span>
-                      <span className="pdi-sub">{b.sub}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </nav>
-
-          <div className="navbar-right">
-            {/* In-app balance */}
-            <button className="usdc-chip" onClick={() => setWalletOpen(true)} title="Deposit / Withdraw">
-              <span className="usdc-chip-icon">$</span>
-              <span>{platformBal}</span>
-              <span className="usdc-chip-add">+</span>
-            </button>
-
-            {/* Points */}
-            <div className="points-chip">
-              <span>★</span>
-              <span className="pc-val">{points.toLocaleString()}</span>
-              {nftBoost > 1 && <span className="pc-boost">{nftBoost}×</span>}
-            </div>
-
-            {/* Wallet dropdown */}
-            <div className="wallet-wrap" ref={menuRef}>
-              <button className="wallet-chip" onClick={() => setMenuOpen((o) => !o)}>
-                <span className="wc-dot" />
-                <span>{profile.username || shortAddr(wallet?.address)}</span>
-                <span>{menuOpen ? '▲' : '▼'}</span>
-              </button>
-              {menuOpen && (
-                <div className="wallet-dropdown">
-                  <div className="wd-addr">{wallet?.address}</div>
-                  <div className="wd-div" />
-                  <button className="wd-item"
-                    onClick={() => { setWalletOpen(true); setMenuOpen(false); }}>
-                    Deposit / Withdraw
-                  </button>
-                  <a className="wd-item" href={explorerUrl(wallet?.address)}
-                    target="_blank" rel="noreferrer">
-                    View on BaseScan ↗
-                  </a>
-                  <Link className="wd-item" to="/profile" onClick={() => setMenuOpen(false)}>
-                    Profile
-                  </Link>
-                  <div className="wd-div" />
-                  <button className="wd-item wd-out"
-                    onClick={() => { disconnect(); setMenuOpen(false); }}>
-                    Disconnect
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile hamburger */}
-            <button
-              className="nav-hamburger"
-              onClick={() => setMobileOpen((o) => !o)}
-              aria-label="Menu"
-            >
-              <span style={{ transform: mobileOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
-              <span style={{ opacity: mobileOpen ? 0 : 1 }} />
-              <span style={{ transform: mobileOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
-            </button>
-          </div>
+      {/* Top bar */}
+      <div className="top-bar">
+        <div className="tb-brand">
+          <div className="tb-logo">♟</div>
+          <span className="tb-name">ChessWar</span>
         </div>
-      </header>
-
-      {/* Mobile nav menu */}
-      <div className={`mobile-nav-menu ${mobileOpen ? 'open' : ''}`}>
-        {navLinks.map((n) => (
-          <Link key={n.path} to={n.path}
-            className={`mobile-nav-link ${location.pathname === n.path ? 'active' : ''}`}>
-            {n.label}
-          </Link>
-        ))}
-        <div className="mobile-nav-divider" />
-        {battles.map((b) => (
-          <button key={b.mode} className="mobile-nav-link"
-            onClick={() => navigate(`/play/${b.mode}`)}>
-            {b.label}
+        <div className="tb-right">
+          <button className="tb-chip tb-pts" onClick={() => navigate('/profile')}>
+            <span>★</span>
+            <span>{points.toLocaleString()}</span>
+            <span className="tb-boost">{nftBoost}×</span>
           </button>
-        ))}
-        <div className="mobile-nav-divider" />
-        <button className="mobile-nav-link"
-          onClick={() => { setWalletOpen(true); setMobileOpen(false); }}>
-          Deposit / Withdraw
-        </button>
-        <button className="mobile-nav-link"
-          style={{ color: 'var(--red)' }}
-          onClick={() => { disconnect(); setMobileOpen(false); }}>
-          Disconnect
-        </button>
+          <button className="tb-chip tb-wallet" onClick={() => setShowWallet(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <rect x="2" y="5" width="20" height="14" rx="2"/>
+              <path d="M16 12h2"/>
+            </svg>
+            <span>Wallet</span>
+          </button>
+        </div>
       </div>
 
-      {walletOpen && <WalletModal onClose={handleWalletClose} />}
+      {/* Bottom tab bar */}
+      <nav className="bottom-tabs">
+        {tabs.map((t) => (
+          <button
+            key={t.path}
+            className={`tab-btn ${path === t.path ? 'active' : ''}`}
+            onClick={() => navigate(t.path)}
+          >
+            <t.Icon active={path === t.path} />
+            <span className="tab-label">{t.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {showWallet && <WalletModal onClose={() => setShowWallet(false)} />}
     </>
   );
 }

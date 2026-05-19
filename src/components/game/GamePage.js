@@ -139,6 +139,8 @@ export default function GamePage() {
   const [capW,      setCapW]     = useState([]);
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
+  const [drawOffer, setDrawOffer] = useState(false);  // draw offered to opponent
+  const [shareMsg,  setShareMsg]  = useState(false);  // share link copied
 
   const sfx = useCallback((name) => { if (soundRef.current) SFX[name]?.(); }, []);
 
@@ -264,7 +266,44 @@ export default function GamePage() {
   };
 
   const rematch = () => { reset(); setStarted(true); };
-  const resign  = () => { if (!started || over) return; if (window.confirm('Resign this game?')) endGame('b', 'resignation'); };
+  const resign  = () => {
+    if (!started || over) return;
+    if (window.confirm('Resign this game?')) endGame('b', 'resignation');
+  };
+
+  const abort = () => {
+    if (!started || over) return;
+    if (moves.length > 1) { toast.error('Cannot abort after 2 moves'); return; }
+    if (window.confirm('Abort game?')) {
+      clearInterval(timerRef.current);
+      overRef.current = true;
+      setOver({ winner: null, reason: 'aborted', earned: 0 });
+      toast('Game aborted');
+    }
+  };
+
+  const offerDraw = () => {
+    if (!started || over) return;
+    setDrawOffer(true);
+    toast('Draw offered — waiting for opponent', { duration: 3000 });
+    // In PvP this would send via WebSocket
+    // vs bot — bot accepts/declines randomly
+    if (isBot) {
+      setTimeout(() => {
+        const accepts = Math.random() > 0.6;
+        if (accepts) { endGame('d', 'draw'); toast('Bot accepted the draw'); }
+        else { setDrawOffer(false); toast('Bot declined the draw'); }
+      }, 1500);
+    }
+  };
+
+  const shareGame = () => {
+    const pgn = chessRef.current.pgn();
+    navigator.clipboard.writeText(pgn);
+    setShareMsg(true);
+    toast.success('PGN copied to clipboard!');
+    setTimeout(() => setShareMsg(false), 2000);
+  };
 
   /* ── Config screen ── */
   if (!configured) {
@@ -381,11 +420,51 @@ export default function GamePage() {
             </div>
           )}
           <MoveList moves={moves} onPGN={exportPGN} />
-          <div className="sidebar-controls">
-            <button className="sc-btn" onClick={() => setFlipped((f) => !f)}>⟳</button>
-            <button className="sc-btn" onClick={() => setSoundOn((s) => !s)}>{soundOn ? '🔊' : '🔇'}</button>
-            {started && !over && <button className="sc-btn sc-resign" onClick={resign}>🏳</button>}
-            <button className="sc-btn" onClick={() => navigate('/')}>🏠</button>
+          <div className="game-controls-panel">
+            <div className="gc-row">
+              <button className="gc-btn" onClick={() => setFlipped((f) => !f)} title="Flip board">
+                <span className="gc-icon">⇅</span>
+                <span>Flip Board</span>
+              </button>
+              <button className={`gc-btn ${soundOn ? '' : 'gc-off'}`} onClick={() => setSoundOn((s) => !s)} title="Toggle sound">
+                <span className="gc-icon">{soundOn ? '♪' : '♪'}</span>
+                <span>{soundOn ? 'Sound On' : 'Sound Off'}</span>
+              </button>
+            </div>
+            <div className="gc-row">
+              <button className="gc-btn" onClick={shareGame} title="Share game">
+                <span className="gc-icon">↗</span>
+                <span>{shareMsg ? 'Copied!' : 'Share PGN'}</span>
+              </button>
+              <button className="gc-btn" onClick={exportPGN} title="Export PGN">
+                <span className="gc-icon">⬇</span>
+                <span>Export PGN</span>
+              </button>
+            </div>
+            {started && !over && (
+              <div className="gc-row">
+                {!drawOffer && (
+                  <button className="gc-btn gc-draw" onClick={offerDraw} title="Offer draw">
+                    <span className="gc-icon">½</span>
+                    <span>Offer Draw</span>
+                  </button>
+                )}
+                {moves.length <= 1 && (
+                  <button className="gc-btn gc-abort" onClick={abort} title="Abort game">
+                    <span className="gc-icon">✕</span>
+                    <span>Abort</span>
+                  </button>
+                )}
+                <button className="gc-btn gc-resign" onClick={resign} title="Resign">
+                  <span className="gc-icon">⚑</span>
+                  <span>Resign</span>
+                </button>
+              </div>
+            )}
+            <button className="gc-btn gc-home" onClick={() => navigate('/')} title="Go home">
+              <span className="gc-icon">←</span>
+              <span>Leave Game</span>
+            </button>
           </div>
         </div>
       </div>

@@ -53,16 +53,15 @@ export default function Navbar() {
   }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const navLinks = [
-    { path: '/',            label: 'Play'         },
+    { path: '/',            label: 'Home'         },
     { path: '/tournament',  label: 'Tournaments'  },
     { path: '/leaderboard', label: 'Leaderboard'  },
     { path: '/profile',     label: 'Profile'      },
   ];
 
   const battles = [
-    { mode: 'bot', label: '♙ vs AI',      sub: 'Train against the machine' },
-    { mode: 'pvp', label: '♟ vs Player',  sub: 'Online PvP battle'         },
-    { mode: 'bet', label: '♜ Bet Battle',  sub: 'USDC wager · 5× points'   },
+    { mode: 'bet',         label: 'Bet Battle',   sub: 'USDC wager · winner takes all' },
+    { mode: '/tournament', label: 'Tournament',   sub: '5 USDC entry · prize pool'     },
   ];
 
   return (
@@ -92,7 +91,7 @@ export default function Navbar() {
                 <div className="nav-play-dropdown" onMouseLeave={() => setPlayOpen(false)}>
                   {battles.map((b) => (
                     <button key={b.mode} className="play-dropdown-item"
-                      onClick={() => { navigate(`/play/${b.mode}`); setPlayOpen(false); }}>
+                      onClick={() => { b.mode.startsWith('/') ? navigate(b.mode) : navigate(`/play/${b.mode}`); setPlayOpen(false); }}>
                       <span className="pdi-label">{b.label}</span>
                       <span className="pdi-sub">{b.sub}</span>
                     </button>

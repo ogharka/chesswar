@@ -25,38 +25,18 @@ export default function Dashboard() {
 
   const BATTLE_MODES = [
     {
-      mode: 'pvp',
-      cls: 'bc-pvp',
-      piece: '♟',
-      title: 'Play Online',
-      sub: 'Challenge a real player',
-      tag: '+10 pts',
-      tagCls: '',
-    },
-    {
-      mode: 'bot',
-      cls: 'bc-bot',
-      piece: '♙',
-      title: 'Play vs Computer',
-      sub: 'Beginner · Intermediate · Hard · Very Hard',
-      tag: '+10 pts',
-      tagCls: '',
-    },
-    {
       mode: 'bet',
       cls: 'bc-bet',
-      piece: '♜',
-      title: 'Play & Earn',
-      sub: 'Wager USDC — winner takes all',
+      title: 'Bet Battle',
+      sub: 'Wager USDC against a real opponent — winner takes all',
       tag: '5× Points',
       tagCls: 'fire',
     },
     {
       mode: '/tournament',
       cls: 'bc-tour',
-      piece: '♛',
       title: 'Tournament',
-      sub: '5 USDC entry · USDC prizes',
+      sub: '5 USDC entry · Compete for the prize pool',
       tag: 'Prize Pool',
       tagCls: 'blue',
     },
@@ -157,7 +137,7 @@ export default function Dashboard() {
             <div className="panel-head"><h2>Point Multipliers</h2></div>
             <div className="mult-list">
               {[
-                { piece: '♟', label: 'Any battle',          val: '+10 pts',         cls: ''     },
+                { piece: '♟', label: 'Any bet game',         val: '+10 pts',         cls: ''     },
                 { piece: '♜', label: 'Bet battle',           val: '5× boost',        cls: 'fire' },
                 { piece: '♝', label: `NFT boost (${nfts.length} owned)`, val: `${nftBoost}× all`, cls: 'blue' },
                 { piece: '♞', label: 'Each referral',        val: '+1,000 pts',      cls: 'green'},

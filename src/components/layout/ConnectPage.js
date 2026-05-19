@@ -32,12 +32,12 @@ export default function ConnectPage() {
   };
 
   const features = [
-    { icon: '♟', title: 'PvP Battle',     sub: 'Challenge players online'      },
-    { icon: '♙', title: 'vs AI',           sub: 'Recruit → Warlord difficulty'  },
-    { icon: '♜', title: 'Bet USDC',        sub: 'Min 0.10 · Winner takes all'   },
-    { icon: '★', title: 'Earn Points',     sub: '5× boost on bet battles'       },
-    { icon: '♝', title: 'War NFTs',       sub: 'Soldier → Warlord · Up to 5×'  },
-    { icon: '♛', title: 'CWAR Airdrop',    sub: '1B tokens · Top earners win'   },
+    { icon: '♜', title: 'Bet Battle',      sub: 'USDC wager · winner takes all' },
+    { icon: '♛', title: 'Tournament',      sub: '5 USDC entry · prize pool'     },
+    { icon: '★', title: 'Earn Points',     sub: '5× boost on every bet'         },
+    { icon: '♝', title: 'War NFTs',        sub: 'Up to 5× point multiplier'     },
+    { icon: '♞', title: 'Referrals',       sub: '+1,000 points per recruit'     },
+    { icon: '♟', title: 'CWAR Airdrop',    sub: '1B tokens · top earners win'   },
   ];
 
   return (
@@ -73,7 +73,7 @@ export default function ConnectPage() {
         )}
 
         <button className="connect-btn" onClick={connect} disabled={loading}>
-          {loading ? 'Connecting…' : 'Connect Wallet'}
+          {loading ? 'Connecting…' : 'Enter ChessWar'}
         </button>
         <p className="connect-hint">MetaMask · Coinbase Wallet · Any EVM wallet · Base Network</p>
 

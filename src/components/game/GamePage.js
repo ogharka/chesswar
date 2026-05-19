@@ -3,7 +3,7 @@ import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { getBotMove, diffLabel } from '../../utils/chessBot';
+
 import toast from 'react-hot-toast';
 
 /* ── Sound ── */
@@ -99,7 +99,7 @@ const TIME_OPTS = [
   { label: '10 min', base: 600,  inc: 0  },
   { label: '30 min', base: 1800, inc: 0  },
 ];
-const BOT_DIFFS = ['beginner', 'intermediate', 'hard', 'veryhard'];
+
 const PSYMS = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
 
 export default function GamePage() {
@@ -108,12 +108,13 @@ export default function GamePage() {
   const { addPoints, updateProfile, profile, addGameResult, nftBoost } = useStore();
 
   const isBet = mode === 'bet';
+  const isBot  = false;
   const isBot = mode === 'bot';
 
   /* config */
   const [configured, setConfigured] = useState(false);
   const [timeOpt,   setTimeOpt]   = useState(TIME_OPTS[2]);
-  const [botDiff,   setBotDiff]   = useState('intermediate');
+
   const [betAmt,    setBetAmt]    = useState('0.10');
   const [betErr,    setBetErr]    = useState('');
   const [soundOn,   setSoundOn]   = useState(true);
@@ -313,18 +314,7 @@ export default function GamePage() {
             {isBot ? '◈ Battle vs AI' : isBet ? 'Bet Battle' : 'PvP Battle'}
           </h2>
 
-          {isBot && (
-            <div className="config-group">
-              <label>Enemy Strength</label>
-              <div className="diff-grid">
-                {BOT_DIFFS.map((d) => (
-                  <button key={d} className={`diff-btn ${botDiff === d ? 'active' : ''}`} onClick={() => setBotDiff(d)}>
-                    {diffLabel(d)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           <div className="config-group">
             <label>Battle Timer</label>
@@ -371,7 +361,7 @@ export default function GamePage() {
           )}
 
           <button className="config-start-btn" onClick={startGame}>
-            {isBet ? `Start Bet Battle · ${parseFloat(betAmt) || 0} USDC` : 'Enter Battle'}
+            {isBet ? `Start Battle · ${parseFloat(betAmt) || 0} USDC` : 'Start Battle'}
           </button>
         </div>
       </div>

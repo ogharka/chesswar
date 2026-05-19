@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import toast from 'react-hot-toast';
 
-const AVATARS = ['♟', '🗡️', '🛡️', '👑', '🏹', '🪖'];
+const AVATARS = ['♔', '♕', '♖', '♗', '♘', '♙'];
 
 export default function UsernameSetup({ onDone }) {
   const { updateProfile, wallet } = useStore();
@@ -76,7 +76,7 @@ export default function UsernameSetup({ onDone }) {
           </div>
           {error && <p className="us-error">{error}</p>}
           {!error && username.length >= 3 && (
-            <p className="us-ok">Callsign available</p>
+            <p className="us-success-msg">Username available</p>
           )}
         </div>
 

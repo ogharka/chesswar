@@ -85,6 +85,7 @@ export default function App() {
             <Route path="/play/:mode"   element={<GamePage />} />
             <Route path="/tournament"   element={<TournamentPage />} />
             <Route path="/leaderboard"  element={<LeaderboardPage />} />
+            <Route path="/profile"      element={<ProfilePage />} />
             <Route path="*"             element={<Navigate to="/" replace />} />
           </Routes>
         </main>

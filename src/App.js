@@ -56,7 +56,7 @@ export default function App() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (wallet && !profile.username) setShowUsername(true);
+    if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) setShowUsername(true);
   }, [wallet, profile.username]);
 
   if (booting) return (

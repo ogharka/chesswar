@@ -1467,3 +1467,21 @@ a { color: inherit; text-decoration: none; }
 .wm-tx-amount.deposit  { color: var(--green); }
 .wm-tx-amount.withdraw { color: var(--red); }
 .wm-tx-link { font-size: 11px; color: var(--blue); }
+
+.tb-disconnect-menu {
+  position: fixed; top: 60px; right: 12px;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius-l); box-shadow: 0 8px 32px rgba(0,0,0,.15);
+  overflow: hidden; z-index: 9999; min-width: 200px;
+  animation: menu-in .15s ease;
+}
+.tb-disconnect-menu button {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 14px 18px;
+  font-size: 14px; font-weight: 600; color: var(--t1);
+  text-align: left; transition: background .1s;
+  border-bottom: 1px solid var(--border);
+}
+.tb-disconnect-menu button:last-child { border-bottom: none; }
+.tb-disconnect-menu button:hover { background: var(--raised); }
+.tb-disconnect-btn { color: var(--red) !important; }

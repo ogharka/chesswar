@@ -431,7 +431,6 @@ input { font-family: var(--font); }
 .cwp-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .cwp-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .cwp-sub  { font-size: 11px; color: var(--text-muted); }
-.cwp-thinking { font-size: 11px; color: var(--gold); animation: pulse-war 1s infinite; }
 .cwp-caps { display: flex; gap: 1px; font-size: 13px; opacity: .55; flex-wrap: wrap; }
 
 /* Timers */
@@ -903,17 +902,6 @@ input { font-family: var(--font); }
   .nft-mint-grid   { grid-template-columns: repeat(2,1fr); }
   .stat-grid-6     { grid-template-columns: repeat(3,1fr); }
 }
-@media (max-width: 768px) {
-  .game-layout     { grid-template-columns: 1fr; }
-  .board-col       { width: 100% !important; }
-  .game-sidebar    { flex-direction: row; flex-wrap: wrap; }
-  .move-hist       { flex: 1; min-width: 200px; max-height: 180px; }
-  .navbar-nav      { display: none; }
-  .stat-grid-6     { grid-template-columns: repeat(2,1fr); }
-  .nft-mint-grid   { grid-template-columns: repeat(2,1fr); }
-  .tourney-grid    { grid-template-columns: 1fr; }
-  .app-main        { padding: 0 16px 48px; }
-}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    WALLET MODAL
@@ -1125,18 +1113,81 @@ input { font-family: var(--font); }
   text-align: left; margin-top: 4px;
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE — Base App optimized
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 @media (max-width: 768px) {
-  .navbar-nav     { display: none; }
-  .nav-hamburger  { display: flex; }
-  .game-layout    { grid-template-columns: 1fr; }
-  .board-col      { width: 100% !important; }
-  .game-sidebar   { flex-direction: row; flex-wrap: wrap; }
-  .move-hist      { flex: 1; min-width: 200px; max-height: 180px; }
-  .stat-grid-6    { grid-template-columns: repeat(2,1fr); }
-  .nft-mint-grid  { grid-template-columns: repeat(2,1fr); }
-  .tourney-grid   { grid-template-columns: 1fr; }
-  .app-main       { padding: 0 16px 48px; }
-  .dash-grid      { grid-template-columns: 1fr; }
+  /* Navbar */
+  .navbar-inner  { padding: 0 12px; height: 52px; }
+  .navbar-nav    { display: none; }
+  .nav-hamburger { display: flex; }
+  .brand-text    { font-size: 16px; }
+  .points-chip   { padding: 4px 10px; }
+  .pc-val        { font-size: 12px; }
+  .usdc-chip     { padding: 4px 10px; font-size: 12px; }
+  .wallet-chip   { padding: 5px 10px; font-size: 12px; }
+
+  /* App */
+  .app-main      { padding: 0 12px 64px; }
+
+  /* Dashboard */
+  .dashboard     { padding: 12px 0 32px; }
+  .dash-grid     { grid-template-columns: 1fr; }
+  .stats-strip   { padding: 12px 14px; gap: 0; }
+  .ss-val        { font-size: 16px; }
+  .ss-div        { margin: 0 10px; }
+  .battle-grid   { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bc-title      { font-size: 13px; }
+  .bc-sub        { font-size: 11px; }
+  .battle-card   { padding: 14px 12px; }
+
+  /* Game board */
+  .cw-game       { padding: 8px 0 32px; }
+  .cw-main       { flex-direction: column; gap: 0; }
+  .cw-board-wrap { width: 100%; }
+  .cw-sidebar    { width: 100%; padding-top: 8px; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .move-hist     { flex: 1; min-width: 200px; max-height: 160px; }
+  .cw-actions    { flex-direction: row; flex-wrap: wrap; }
+  .cwa-btn       { min-width: 44px; flex: 0; }
+  .cwa-home      { width: auto; flex: 0; }
+  .cw-player     { padding: 6px 0; }
+  .cwp-avatar    { width: 28px; height: 28px; font-size: 14px; }
+  .cwp-name      { font-size: 13px; }
+  .timer         { font-size: 20px; padding: 6px 12px; min-width: 90px; }
+
+  /* Config screen */
+  .config-card   { padding: 20px 16px; }
+  .diff-grid     { grid-template-columns: 1fr 1fr; }
+  .tc-grid       { gap: 6px; }
+  .tc-btn        { padding: 7px 12px; font-size: 13px; }
+
+  /* Profile */
+  .stat-grid-6   { grid-template-columns: repeat(3,1fr); }
+  .nft-mint-grid { grid-template-columns: repeat(2,1fr); }
+  .ph-big-av     { font-size: 48px; }
+
+  /* Tournament */
+  .tourney-grid  { grid-template-columns: 1fr; }
+
+  /* Modals */
+  .wallet-modal  { border-radius: var(--radius-lg); }
+  .go-modal      { margin: 12px; }
+  .confirm-modal { padding: 20px 16px; }
+
+  /* Connect page */
+  .connect-card  { padding: 28px 20px; border-radius: var(--radius-lg); }
+  .feature-grid  { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+
+@media (max-width: 400px) {
+  .stats-strip   { overflow-x: auto; }
+  .battle-grid   { grid-template-columns: 1fr; }
+  .stat-grid-6   { grid-template-columns: repeat(2,1fr); }
+  .nft-mint-grid { grid-template-columns: 1fr 1fr; }
+  .tc-btn        { padding: 6px 10px; font-size: 12px; }
+  .timer         { font-size: 18px; min-width: 80px; }
+  .navbar-inner  { padding: 0 10px; }
+  .usdc-chip     { display: none; }
 }
 
 /* ── CONFIRMATION MODAL ── */
@@ -1179,3 +1230,31 @@ input { font-family: var(--font); }
   box-shadow: 0 4px 12px rgba(0,82,255,.25);
 }
 .confirm-ok:hover { background: var(--cb-blue-dark); }
+
+
+
+/* ── NFT OWNED DISPLAY ── */
+.nft-loading {
+  font-size: 13px; color: var(--text-muted);
+  padding: 12px; text-align: center;
+  animation: pulse-war 1.5s infinite;
+}
+.nft-owned-summary {
+  background: var(--cb-blue-light); border: 1px solid rgba(0,82,255,.2);
+  border-radius: var(--radius); padding: 10px 16px;
+  font-size: 13px; color: var(--cb-blue); margin-bottom: 4px;
+}
+.nft-owned-summary strong { font-weight: 800; }
+.nc-owned-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-raised); border-radius: 20px;
+  padding: 4px 10px; font-size: 12px; color: var(--text-secondary);
+}
+.nc-owned-count {
+  font-size: 14px; font-weight: 800;
+  color: var(--cb-blue);
+}
+.nc-active-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}

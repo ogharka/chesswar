@@ -1,5 +1,5 @@
 // ── Tournament ────────────────────────────────────────────────────────────
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { useStore } from '../../store/useStore';
 import { syncNFTBoost } from '../../utils/api';
@@ -213,9 +213,43 @@ const NFT_TIERS = [
 
 export function ProfilePage() {
   const { wallet, profile, updateProfile, nfts, mintNFT, points, nftBoost, pointsLog } = useStore();
-  const [editing, setEditing] = useState(false);
-  const [nameVal, setNameVal] = useState(profile.username || '');
-  const [minting, setMinting] = useState(null);
+  const [editing,    setEditing]    = useState(false);
+  const [nameVal,    setNameVal]    = useState(profile.username || '');
+  const [minting,    setMinting]    = useState(null);
+  const [onchainNFTs, setOnchainNFTs] = useState([]);
+  const [loadingNFTs, setLoadingNFTs] = useState(false);
+
+  // Load NFTs from blockchain on mount
+  useEffect(() => {
+    if (!wallet?.address) return;
+    const loadNFTs = async () => {
+      setLoadingNFTs(true);
+      try {
+        const nftAddress = process.env.REACT_APP_NFT_ADDRESS;
+        if (!nftAddress || !window.ethereum) return;
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract  = new ethers.Contract(nftAddress, [
+          'function balanceOf(address) view returns (uint256)',
+          'function tokenOfOwnerByIndex(address,uint256) view returns (uint256)',
+          'function tokenTier(uint256) view returns (uint8)',
+          'function getBoostMultiplier(address) view returns (uint8)',
+        ], provider);
+        const balance = await contract.balanceOf(wallet.address);
+        const bal = Number(balance);
+        const tokens = [];
+        for (let i = 0; i < bal; i++) {
+          const tokenId = await contract.tokenOfOwnerByIndex(wallet.address, i);
+          const tier    = await contract.tokenTier(tokenId);
+          tokens.push({ tokenId: Number(tokenId), tier: Number(tier) });
+        }
+        setOnchainNFTs(tokens);
+      } catch (e) {
+        console.log('NFT load error:', e.message);
+      }
+      setLoadingNFTs(false);
+    };
+    loadNFTs();
+  }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveName = () => {
     if (nameVal.trim().length < 2) { toast.error('Name too short'); return; }
@@ -319,6 +353,14 @@ export function ProfilePage() {
           <h2>Mint War NFTs</h2>
           <p>Higher rank = higher point multiplier. Best NFT determines your boost.</p>
         </div>
+        {loadingNFTs && (
+          <div className="nft-loading">Loading your NFTs from blockchain...</div>
+        )}
+        {onchainNFTs.length > 0 && !loadingNFTs && (
+          <div className="nft-owned-summary">
+            You own <strong>{onchainNFTs.length}</strong> War NFT{onchainNFTs.length > 1 ? 's' : ''} on Base
+          </div>
+        )}
         <div className="nft-mint-grid">
           {NFT_TIERS.map((t) => {
             const owned = nfts.filter((n) => n.tier === t.tier).length;

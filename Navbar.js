@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { ethers } from 'ethers';
+import { useNavigate as useNav } from 'react-router-dom';
 import WalletModal from './WalletModal';
 
 const USDC_ABI = ['function balanceOf(address) view returns (uint256)'];

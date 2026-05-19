@@ -481,8 +481,8 @@ export default function GamePage() {
       </div>
 
       {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
+    </div>
 
-      {/* Game over */}
       {over && (
         <div className="game-over-overlay">
           <div className="go-modal">
@@ -491,24 +491,24 @@ export default function GamePage() {
                 {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? 'Draw' : 'Defeated'}
               </div>
               <div className="go-reason">
-                {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate — enemy king falls!' : 'Your king has fallen')}
-                {over.reason === 'resignation' && (over.winner === 'w' ? 'Enemy retreated' : 'You retreated')}
-                {over.reason === 'timeout'     && (over.winner === 'w' ? 'Enemy ran out of time' : 'Time expired')}
-                {over.reason === 'draw'        && 'Battle drawn'}
+                {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate' : 'Your king has fallen')}
+                {over.reason === 'resignation' && (over.winner === 'w' ? 'Opponent resigned' : 'You resigned')}
+                {over.reason === 'timeout'     && (over.winner === 'w' ? 'Opponent out of time' : 'Time expired')}
+                {over.reason === 'draw'        && 'Game drawn by agreement'}
+                {over.reason === 'aborted'     && 'Game aborted'}
               </div>
             </div>
             <div className="go-stats">
-              <div className="go-row"><span>War points</span><strong className="gold">+{over.earned}</strong></div>
+              <div className="go-row"><span>Points earned</span><strong className="gold">+{over.earned}</strong></div>
               <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
               {isBet && (
                 <div className="go-row">
-                  <span>Wager result</span>
+                  <span>Wager</span>
                   <strong className={over.winner === 'w' ? 'green' : 'red'}>
                     {over.winner === 'w' ? `+${(parseFloat(betAmt) * 2 * 0.98).toFixed(2)} USDC` : over.winner === 'd' ? 'Refunded' : `-${betAmt} USDC`}
                   </strong>
                 </div>
               )}
-              {isBet && <div className="go-row"><span>Bet boost</span><strong className="fire">× 5× applied</strong></div>}
             </div>
             <div className="go-actions">
               <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
@@ -518,6 +518,5 @@ export default function GamePage() {
           </div>
         </div>
       )}
-    </div>
   );
 }

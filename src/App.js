@@ -72,11 +72,12 @@ export default function App() {
 
   if (!wallet) return <ConnectPage />;
 
-  if (showUsername) return <UsernameSetup onDone={() => setShowUsername(false)} />;
+  
 
   return (
     <BrowserRouter>
       <div className="app-shell">
+        {showUsername && <UsernameSetup onDone={() => setShowUsername(false)} />}
         <Navbar />
         <main className="app-main">
           <Routes>

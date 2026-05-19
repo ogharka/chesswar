@@ -1193,3 +1193,32 @@ input { font-family: var(--font); }
   box-shadow: 0 4px 12px rgba(0,82,255,.25);
 }
 .confirm-ok:hover { background: var(--cb-blue-dark); }
+
+/* ── GAME CONTROLS PANEL ── */
+.game-controls-panel {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.gc-row {
+  display: flex; gap: 6px;
+}
+.gc-btn {
+  flex: 1; display: flex; align-items: center; gap: 7px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: var(--bg-raised); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  transition: all .15s; cursor: pointer; white-space: nowrap;
+}
+.gc-btn:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-dark); }
+.gc-icon { font-size: 14px; flex-shrink: 0; }
+.gc-off { opacity: .5; }
+.gc-draw   { color: var(--cb-blue) !important; border-color: rgba(0,82,255,.2) !important; background: var(--cb-blue-light) !important; }
+.gc-draw:hover { background: var(--cb-blue) !important; color: #fff !important; }
+.gc-abort  { color: var(--gold) !important; border-color: rgba(245,158,11,.2) !important; }
+.gc-abort:hover { background: var(--gold-bg) !important; }
+.gc-resign { color: var(--red) !important; border-color: rgba(239,68,68,.2) !important; }
+.gc-resign:hover { background: var(--red-bg) !important; }
+.gc-home { color: var(--text-muted) !important; margin-top: 2px; }
+.gc-home:hover { color: var(--text-primary) !important; }

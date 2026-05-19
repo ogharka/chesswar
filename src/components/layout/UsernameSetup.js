@@ -32,23 +32,23 @@ export default function UsernameSetup({ onDone }) {
   };
 
   return (
-    <div className="username-setup-overlay">
-      <div className="username-setup-card">
+    <div className="us-overlay">
+      <div className="us-card">
 
         <div className="us-header">
-          <div className="us-logo">♟♙</div>
-          <h2>Set Your Callsign</h2>
+          <div className="us-chess-icon">♟♙</div>
+          <h2>Create Your Profile</h2>
           <p>Choose a name that will appear on the leaderboard and in battles</p>
         </div>
 
         {/* Avatar picker */}
         <div className="us-section">
           <label className="us-label">Choose Avatar</label>
-          <div className="us-avatar-grid">
+          <div className="us-avatars">
             {AVATARS.map((a, i) => (
               <button
                 key={i}
-                className={`us-avatar-btn ${avatar === i ? 'selected' : ''}`}
+                className={`us-av ${avatar === i ? 'selected' : ''}`}
                 onClick={() => setAvatar(i)}
               >
                 {a}
@@ -61,18 +61,18 @@ export default function UsernameSetup({ onDone }) {
         <div className="us-section">
           <label className="us-label">Username</label>
           <div className="us-input-wrap">
-            <span className="us-preview-av">{AVATARS[avatar]}</span>
+            <span className="us-av-preview">{AVATARS[avatar]}</span>
             <input
               className={`us-input ${error ? 'us-input-err' : username.length >= 3 ? 'us-input-ok' : ''}`}
               type="text"
-              placeholder="Enter your callsign..."
+              placeholder="Enter username"
               value={username}
               onChange={handleChange}
               maxLength={20}
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
-            <span className="us-char-count">{username.length}/20</span>
+            <span className="us-count">{username.length}/20</span>
           </div>
           {error && <p className="us-error">{error}</p>}
           {!error && username.length >= 3 && (
@@ -81,21 +81,21 @@ export default function UsernameSetup({ onDone }) {
         </div>
 
         {/* Wallet info */}
-        <div className="us-wallet-info">
+        <div className="us-wallet">
           <span className="us-wallet-dot" />
           <span>{wallet?.address?.slice(0, 8)}...{wallet?.address?.slice(-6)}</span>
-          <span className="us-wallet-label">Base Network</span>
+          <span className="us-wallet-net">Base Network</span>
         </div>
 
         <button
-          className="us-submit-btn"
+          className="us-submit"
           onClick={handleSubmit}
           disabled={username.length < 3 || !!error}
         >
-          Enter the Battlefield
+          Get Started
         </button>
 
-        <button className="us-skip-btn" onClick={onDone}>
+        <button className="us-skip" onClick={onDone}>
           Skip for now
         </button>
 

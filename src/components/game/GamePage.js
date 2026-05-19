@@ -110,6 +110,7 @@ export default function GamePage() {
   const { addPoints, updateProfile, profile, addGameResult, nftBoost } = useStore();
 
   const isBet = mode === 'bet';
+  const isBot  = mode === 'bot';
 
   /* config */
   const [configured, setConfigured] = useState(false);
@@ -141,8 +142,9 @@ export default function GamePage() {
   const [capW,      setCapW]     = useState([]);
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
-  const [drawOffer, setDrawOffer] = useState(false);  // draw offered to opponent
-  const [shareMsg,  setShareMsg]  = useState(false);  // share link copied
+  const [drawOffer,    setDrawOffer]    = useState(false);
+  const [shareMsg,     setShareMsg]     = useState(false);
+  const [showControls, setShowControls] = useState(false);
 
   const sfx = useCallback((name) => { if (soundRef.current) SFX[name]?.(); }, []);
 
@@ -152,8 +154,9 @@ export default function GamePage() {
     overRef.current = true;
     clearInterval(timerRef.current);
     const won = winner === 'w', draw = winner === 'd';
-    const base = draw ? 5 : won ? 20 : 10;
-    const earned = addPoints(base, `${mode} · ${reason}`, isBet);
+    // Resign/Leave = 0 pts for loser, draw = 5, loss by checkmate/timeout = 10, win = 20
+    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? 0 : 10;
+    const earned = base > 0 ? addPoints(base, `${mode} · ${reason}`, isBet) : 0;
     updateProfile({
       gamesPlayed: profile.gamesPlayed + 1,
       gamesWon:    won  ? profile.gamesWon  + 1 : profile.gamesWon,
@@ -269,6 +272,7 @@ export default function GamePage() {
   const rematch = () => { reset(); setStarted(true); };
   const resign = () => {
     if (!started || over) return;
+    if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
     endGame('b', 'resignation');
   };
 
@@ -278,7 +282,8 @@ export default function GamePage() {
     clearInterval(timerRef.current);
     overRef.current = true;
     setOver({ winner: null, reason: 'aborted', earned: 0 });
-    toast('Game aborted');
+    if (isBet) toast('Game aborted — bet refunded');
+    else toast('Game aborted');
   };
 
   const offerDraw = () => {
@@ -338,7 +343,7 @@ export default function GamePage() {
           <div className="config-group config-inline">
             <label>Sound</label>
             <button className={`sound-toggle ${soundOn ? 'on' : 'off'}`} onClick={() => setSoundOn((s) => !s)}>
-              {soundOn ? 'Sound On' : 'Sound Off'}
+              <span className="sound-toggle-knob" />
             </button>
           </div>
 
@@ -379,143 +384,161 @@ export default function GamePage() {
   /* ── Game screen ── */
   return (
     <>
-    <div className="cw-game">
+    <div className="game-screen">
 
-      <div className="cw-main">
-        {/* Board column */}
-        <div className="cw-board-wrap">
-
-          {/* Opponent row */}
-          <div className="cw-player">
-            <div className="cwp-left">
-              <div className="cwp-avatar">'♟'</div>
-              <div className="cwp-info">
-                <span className="cwp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</span>
-                
-                <span className="cwp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</span>
-              </div>
-            </div>
-            <Timer seconds={bTime} active={started && !over && turn === 'b'} side="black" inc={timeOpt.inc} />
+      {/* Opponent */}
+      <div className="game-player">
+        <div className="gp-left">
+          <div className="gp-av">{isBot ? '🤖' : '♟'}</div>
+          <div>
+            <div className="gp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</div>
+            <div className="gp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
+        </div>
+        <Timer seconds={bTime} active={started && !over && turn==='b'} side="black" inc={timeOpt.inc} />
+      </div>
 
-          {/* Board */}
+      {/* Board */}
+      <div className="game-board-wrap">
+        <div className="game-board-inner">
+      <div className="game-board-area">
           <Chessboard
             position={fen}
             onSquareClick={onSquareClick}
             onPieceDrop={onDrop}
             boardOrientation={flipped ? 'black' : 'white'}
             customSquareStyles={hilights}
-            customBoardStyle={{ borderRadius: '3px', overflow: 'hidden' }}
+            customBoardStyle={{ borderRadius: '0', overflow: 'hidden' }}
             customDarkSquareStyle={{ backgroundColor: '#B58863' }}
             customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
             areArrowsAllowed
           />
-
-          {/* Self row */}
-          <div className="cw-player">
-            <div className="cwp-left">
-              <div className="cwp-avatar">♙</div>
-              <div className="cwp-info">
-                <span className="cwp-name">{profile?.username || 'You'}</span>
-                <span className="cwp-sub">{nftBoost}× boost{isBet ? ' · 5× pts' : ''}</span>
-                <span className="cwp-caps">{capW.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</span>
-              </div>
-            </div>
-            <Timer seconds={wTime} active={started && !over && turn === 'w'} side="white" inc={timeOpt.inc} />
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="cw-sidebar">
-          {isBet && (
-            <div className="cw-bet-pill">
-              <span className="cw-bet-amt">{betAmt} USDC</span>
-              <span className="cw-bet-boost">5× pts</span>
-            </div>
-          )}
-
-          <MoveList moves={moves} onPGN={exportPGN} />
-
-          {/* Action buttons */}
-          <div className="cw-actions">
-            <button className="cwa-btn" onClick={() => setFlipped(f => !f)} title="Flip board">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-              <span>Flip</span>
-            </button>
-            <button className={`cwa-btn ${!soundOn ? 'cwa-off' : ''}`} onClick={() => setSoundOn(s => !s)} title="Sound">
-              {soundOn
-                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-              }
-              <span>{soundOn ? 'Sound' : 'Muted'}</span>
-            </button>
-            <button className="cwa-btn" onClick={shareGame} title="Share">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-              <span>{shareMsg ? 'Copied!' : 'Share'}</span>
-            </button>
-            {started && !over && !drawOffer && (
-              <button className="cwa-btn cwa-draw" onClick={offerDraw} title="Offer draw">
-                <span style={{fontSize:'15px',fontWeight:'800',lineHeight:1}}>½</span>
-                <span>Draw</span>
-              </button>
-            )}
-            {started && !over && moves.length <= 1 && (
-              <button className="cwa-btn cwa-abort" onClick={abort} title="Abort">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                <span>Abort</span>
-              </button>
-            )}
-            {started && !over && (
-              <button className="cwa-btn cwa-resign" onClick={resign} title="Resign">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-                <span>Resign</span>
-              </button>
-            )}
-            <button className="cwa-btn cwa-home" onClick={() => navigate('/')}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              <span>Home</span>
-            </button>
-          </div>
+      </div>
         </div>
       </div>
 
-      {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
-    </div>
-
-    {over && (
-        <div className="game-over-overlay">
-          <div className="go-modal">
-            <div className={`go-banner ${over.winner === 'w' ? 'go-win' : over.winner === 'd' ? 'go-draw' : 'go-loss'}`}>
-              <div className="go-title">
-                {over.winner === 'w' ? 'Victory!' : over.winner === 'd' ? 'Draw' : 'Defeated'}
-              </div>
-              <div className="go-reason">
-                {over.reason === 'checkmate'   && (over.winner === 'w' ? 'Checkmate' : 'Your king has fallen')}
-                {over.reason === 'resignation' && (over.winner === 'w' ? 'Opponent resigned' : 'You resigned')}
-                {over.reason === 'timeout'     && (over.winner === 'w' ? 'Opponent out of time' : 'Time expired')}
-                {over.reason === 'draw'        && 'Game drawn by agreement'}
-                {over.reason === 'aborted'     && 'Game aborted'}
-              </div>
-            </div>
-            <div className="go-stats">
-              <div className="go-row"><span>Points earned</span><strong className="gold">+{over.earned}</strong></div>
-              <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
-              {isBet && (
-                <div className="go-row">
-                  <span>Wager</span>
-                  <strong className={over.winner === 'w' ? 'green' : 'red'}>
-                    {over.winner === 'w' ? `+${(parseFloat(betAmt) * 2 * 0.98).toFixed(2)} USDC` : over.winner === 'd' ? 'Refunded' : `-${betAmt} USDC`}
-                  </strong>
-                </div>
-              )}
-            </div>
-            <div className="go-actions">
-              <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
-              <button className="go-btn" onClick={exportPGN}>PGN</button>
-              <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
-            </div>
+      {/* Self */}
+      <div className="game-player">
+        <div className="gp-left">
+          <div className="gp-av">♙</div>
+          <div>
+            <div className="gp-name">{profile?.username || 'You'}</div>
+            <div className="gp-caps">{capW.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>
+        <Timer seconds={wTime} active={started && !over && turn==='w'} side="white" inc={timeOpt.inc} />
+      </div>
+
+      {/* Battle log */}
+      <div className="battle-log">
+        <div className="bl-title">Battle Log</div>
+        {moves.length === 0
+          ? <div className="bl-empty">Awaiting first move...</div>
+          : <div className="bl-moves">
+              {Array.from({length: Math.ceil(moves.length/2)}, (_,i) => (
+                <div className="bl-row" key={i}>
+                  <span className="bl-num">{i+1}.</span>
+                  <span className="bl-w">{moves[i*2]?.san}</span>
+                  <span className="bl-b">{moves[i*2+1]?.san || ''}</span>
+                </div>
+              ))}
+            </div>
+        }
+      </div>
+
+      {/* FAB hamburger */}
+      {started && !over && (
+        <button className="game-fab" onClick={() => setShowControls(true)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <line x1="3" y1="6"  x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      )}
+    </div>
+
+    {/* Bottom sheet game menu */}
+    {showControls && (
+      <>
+        <div className="game-sheet-overlay" onClick={() => setShowControls(false)} />
+        <div className="game-sheet">
+          <div className="gs-handle" />
+          <button className="gs-item" onClick={() => { setFlipped(f=>!f); setShowControls(false); }}>
+            Flip Board
+          </button>
+          <button className="gs-item" onClick={() => { setSoundOn(s=>!s); setShowControls(false); }}>
+            {soundOn ? 'Disable Sounds' : 'Enable Sounds'}
+          </button>
+          <button className="gs-item" onClick={() => { shareGame(); setShowControls(false); }}>
+            Share Game
+          </button>
+          {!drawOffer && (
+            <button className="gs-item gs-draw" onClick={() => { offerDraw(); setShowControls(false); }}>
+              Offer Draw
+            </button>
+          )}
+          {moves.length <= 1 && (
+            <button className="gs-item gs-abort" onClick={() => { abort(); setShowControls(false); }}>
+              Abort Game
+            </button>
+          )}
+          <button className="gs-item gs-resign" onClick={() => { resign(); setShowControls(false); }}>
+            Resign
+          </button>
+          <button className="gs-item gs-resign" onClick={() => {
+            if (started && !over) {
+              if (!window.confirm('Leaving counts as resign. You will lose' + (isBet ? ' and forfeit your bet.' : '.'))) return;
+              endGame('b', 'resignation');
+              setTimeout(() => navigate('/'), 1500);
+            } else { navigate('/'); }
+            setShowControls(false);
+          }}>
+            Leave Game
+          </button>
+          <button className="gs-cancel" onClick={() => setShowControls(false)}>
+            Cancel
+          </button>
+        </div>
+      </>
+    )}
+
+    {promo && <PromoPicker color={chessRef.current.turn()} onSelect={onPromoSelect} />}
+
+    {over && (
+      <div className="game-over-overlay">
+        <div className="go-modal">
+          <div className={`go-banner ${over.winner==='w' ? 'go-win' : over.winner==='d' ? 'go-draw' : 'go-loss'}`}>
+            <div className="go-title">
+              {over.winner==='w' ? 'Victory!' : over.winner==='d' ? 'Draw' : 'Defeated'}
+            </div>
+            <div className="go-reason">
+              {over.reason==='checkmate'   && (over.winner==='w' ? 'Checkmate' : 'Your king has fallen')}
+              {over.reason==='resignation' && (over.winner==='w' ? 'Opponent resigned' : 'You resigned')}
+              {over.reason==='timeout'     && (over.winner==='w' ? 'Opponent out of time' : 'Time expired')}
+              {over.reason==='draw'        && 'Game drawn by agreement'}
+              {over.reason==='aborted'     && 'Game aborted'}
+            </div>
+          </div>
+          <div className="go-stats">
+            <div className="go-row"><span>Points earned</span><strong className="gold">+{over.earned}</strong></div>
+            <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
+            {isBet && (
+              <div className="go-row">
+                <span>Wager</span>
+                <strong className={over.winner==='w' ? 'green' : 'red'}>
+                  {over.winner==='w' ? `+${(parseFloat(betAmt)*2*0.98).toFixed(2)} USDC` : over.winner==='d' ? 'Refunded' : `-${betAmt} USDC`}
+                </strong>
+              </div>
+            )}
+          </div>
+          <div className="go-actions">
+            <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
+            <button className="go-btn" onClick={exportPGN}>PGN</button>
+            <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

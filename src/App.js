@@ -22,6 +22,11 @@ export default function App() {
 
   useEffect(() => {
     const tryReconnect = async () => {
+      if (localStorage.getItem("cw_just_disconnected")) {
+        localStorage.removeItem("cw_just_disconnected");
+        setBooting(false);
+        return;
+      }
       if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });

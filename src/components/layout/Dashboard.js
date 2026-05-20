@@ -114,8 +114,8 @@ export default function Dashboard() {
                 <circle cx="15" cy="13" r="1" fill={mode==='bot'?'var(--green)':'var(--t2)'}/>
               </svg>
             </div>
-            <div className="mc-title">vs Computer</div>
-            <div className="mc-sub">Practice & improve</div>
+            <div className="mc-title">vs Bot</div>
+            <div className="mc-sub">Play against AI bot</div>
             <span className="mc-tag" style={{background:'#E6F9F1',color:'var(--green)'}}>Free</span>
           </div>
 
@@ -233,7 +233,7 @@ export default function Dashboard() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            {mode === 'bot' ? 'Play vs Computer' : mode === 'bet' ? `Bet ${betAmt} USDC` : 'Find Opponent'}
+            {mode === 'bot' ? 'Play vs Bot' : mode === 'bet' ? `Bet ${betAmt} USDC` : 'Find Opponent'}
           </>
         )}
       </button>

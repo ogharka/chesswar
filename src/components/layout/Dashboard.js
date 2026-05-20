@@ -233,7 +233,7 @@ export default function Dashboard() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            {mode === 'bot' ? 'Play vs Bot' : mode === 'bet' ? `Bet ${betAmt} USDC` : 'Find Opponent'}
+            {mode === 'bot' ? 'Play vs Bot' : mode === 'bet' ? `Bet ${betAmt} USDC` : mode === 'pvp-friend' ? 'Copy Invite Link' : 'Find Opponent'}
           </>
         )}
       </button>

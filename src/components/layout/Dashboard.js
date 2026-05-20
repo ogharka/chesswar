@@ -172,15 +172,16 @@ export default function Dashboard() {
       <button
         className={`find-btn ${searching ? 'searching' : ''}`}
         onClick={handlePlay}
-        disabled={searching}
+        disabled={false}
       >
         {searching ? (
-          <>
+          <div style={{display:'flex',alignItems:'center',gap:12,width:'100%',justifyContent:'center'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:'spin 1s linear infinite'}}>
               <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
             </svg>
-            Finding opponent...
-          </>
+            <span>Finding opponent...</span>
+            <button onClick={(e)=>{e.stopPropagation();cancelSearch();}} style={{background:'rgba(255,255,255,0.3)',border:'none',borderRadius:8,padding:'4px 12px',color:'#fff',fontWeight:700,fontSize:13,cursor:'pointer'}}>Cancel</button>
+          </div>
         ) : (
           <>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

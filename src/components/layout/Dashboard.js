@@ -28,11 +28,40 @@ export default function Dashboard() {
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
 
   const handlePlay = () => {
-    if (mode === 'pvp') {
-      toast('PvP matchmaking coming soon!', { icon: '⚔️' });
+    if (mode === 'pvp-friend') {
+      const link = window.location.origin + '?invite=' + Math.random().toString(36).slice(2,8).toUpperCase();
+      navigator.clipboard.writeText(link);
+      toast.success('Invite link copied! Share with your friend');
       return;
     }
-    navigate(`/play/${mode}`, { state: { timeControl: selTime, betAmount: betAmt } });
+    if (mode === 'pvp-match') {
+      toast('Free PvP coming soon!', { icon: '⚔️' });
+      return;
+    }
+    if (mode === 'bet') {
+      setSearching(true);
+      const socket = connectSocket();
+      socket.off('game_found');
+      socket.emit('join_queue', {
+        betAmount: betAmt,
+        username: profile.username || 'Anonymous',
+        address: ''
+      });
+      socket.on('game_found', ({ gameId, color, opponent, betAmount: bAmt }) => {
+        setSearching(false);
+        toast.success('Opponent found! Starting game...');
+        navigate('/play/bet', { state: { timeControl: selTime, betAmount: bAmt, gameId, color, opponent, online: true } });
+      });
+      return;
+    }
+    navigate('/play/' + mode, { state: { timeControl: selTime, betAmount: betAmt } });
+  };
+
+  const cancelSearch = () => {
+    const socket = connectSocket();
+    socket.emit('leave_queue');
+    setSearching(false);
+    toast('Search cancelled');
   };
 
   const recent = gameHistory.slice(0, 8);

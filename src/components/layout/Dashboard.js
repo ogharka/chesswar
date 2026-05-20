@@ -35,7 +35,19 @@ export default function Dashboard() {
       return;
     }
     if (mode === 'pvp-match') {
-      toast('Free PvP coming soon!', { icon: '⚔️' });
+      setSearching(true);
+      const socket = connectSocket();
+      socket.off('game_found');
+      socket.emit('join_queue', {
+        betAmount: 'free',
+        username: profile.username || 'Anonymous',
+        address: ''
+      });
+      socket.on('game_found', ({ gameId, color, opponent }) => {
+        setSearching(false);
+        toast.success('Opponent found! Starting game...');
+        navigate('/play/pvp', { state: { timeControl: selTime, gameId, color, opponent, online: true } });
+      });
       return;
     }
     if (mode === 'bet') {
@@ -90,7 +102,7 @@ export default function Dashboard() {
         <div className="section-title">Mode</div>
         <div className="mode-grid">
           <div
-            className={`mode-card bot ${mode === 'bot' ? 'active' : ''}`}
+            className={`mode-card ${mode === 'bot' ? 'active' : ''}`}
             onClick={() => setMode('bot')}
             style={mode === 'bot' ? { borderColor: 'var(--green)', background: 'linear-gradient(135deg,#fff 60%,#E6F9F1)' } : {}}
           >
@@ -104,10 +116,28 @@ export default function Dashboard() {
             </div>
             <div className="mc-title">vs Computer</div>
             <div className="mc-sub">Practice & improve</div>
-            <span className="mc-tag green">Free</span>
+            <span className="mc-tag" style={{background:'#E6F9F1',color:'var(--green)'}}>Free</span>
           </div>
+
           <div
-            className={`mode-card bet ${mode === 'bet' ? 'active' : ''}`}
+            className={`mode-card ${mode === 'pvp-match' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-match')}
+            style={mode === 'pvp-match' ? { borderColor: '#8B5CF6', background: 'linear-gradient(135deg,#fff 60%,#F5F3FF)' } : {}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-match'?'#8B5CF6':'var(--t2)'} strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="mc-title">Play Online</div>
+            <div className="mc-sub">Free · match with players</div>
+            <span className="mc-tag" style={{background:'#F5F3FF',color:'#8B5CF6'}}>Free</span>
+          </div>
+
+          <div
+            className={`mode-card ${mode === 'bet' ? 'active' : ''}`}
             onClick={() => setMode('bet')}
             style={mode === 'bet' ? { borderColor: 'var(--blue)', background: 'linear-gradient(135deg,#fff 60%,var(--blue-light))' } : {}}
           >
@@ -119,7 +149,23 @@ export default function Dashboard() {
             </div>
             <div className="mc-title">Bet Battle</div>
             <div className="mc-sub">Wager USDC, win more</div>
-            <span className="mc-tag fire">5× Points</span>
+            <span className="mc-tag" style={{background:'var(--blue-light)',color:'var(--blue)'}}>5× Points</span>
+          </div>
+
+          <div
+            className={`mode-card ${mode === 'pvp-friend' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-friend')}
+            style={mode === 'pvp-friend' ? { borderColor: 'var(--gold)', background: 'linear-gradient(135deg,#fff 60%,#FEF3C7)' } : {}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-friend'?'var(--gold)':'var(--t2)'} strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <div className="mc-title">Play with Friend</div>
+            <div className="mc-sub">Share link · play together</div>
+            <span className="mc-tag" style={{background:'#FEF3C7',color:'var(--gold)'}}>Invite</span>
           </div>
         </div>
       </div>

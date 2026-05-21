@@ -190,9 +190,25 @@ export default function GamePage() {
     setFen(chess.fen()); setTurn(chess.turn()); setMoves((m) => [...m, res]);
     setHilights({ [res.from]: { background: 'rgba(201,168,76,0.5)' }, [res.to]: { background: 'rgba(201,168,76,0.5)' } });
     setSelected(null);
-    if (chess.isCheckmate()) { endGame(chess.turn() === 'w' ? 'b' : 'w', 'checkmate'); return true; }
-    if (chess.isDraw())      { endGame('d', 'draw'); return true; }
-    if (chess.isCheck())     { sfx('check'); toast('⚠️ Check!', { duration: 1000 }); }
+    if (chess.isCheckmate()) {
+      const winner = chess.turn() === 'w' ? 'b' : 'w';
+      endGame(winner, 'checkmate');
+      if (isOnline && gameId) {
+        const socket = connectSocket();
+        const winnerColor = winner === 'w' ? 'white' : 'black';
+        socket.emit('game_over', { gameId, winner: winnerColor, reason: 'checkmate' });
+      }
+      return true;
+    }
+    if (chess.isDraw()) {
+      endGame('d', 'draw');
+      if (isOnline && gameId) {
+        const socket = connectSocket();
+        socket.emit('game_over', { gameId, winner: 'draw', reason: 'draw' });
+      }
+      return true;
+    }
+    if (chess.isCheck()) { sfx('check'); toast('⚠️ Check!', { duration: 1000 }); }
     // Send move to opponent if online
     if (isOnline && gameId) {
       const socket = connectSocket();
@@ -270,8 +286,13 @@ export default function GamePage() {
     if (!started || over) return;
     timerRef.current = setInterval(() => {
       if (overRef.current) { clearInterval(timerRef.current); return; }
-      if (chessRef.current.turn() === 'w') setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
-      else setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+      const turn = chessRef.current.turn();
+      // In online games only count down the current player's timer
+      if (turn === 'w') {
+        setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+      } else {
+        setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+      }
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [started, over, endGame]);

@@ -234,6 +234,12 @@ export default function GamePage() {
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
 
+    // Receive opponent timer updates
+    socket.on('timer_sync', ({ wTime: oppW, bTime: oppB }) => {
+      if (myColor === 'white') setBTime(oppB);
+      else setWTime(oppW);
+    });
+
     // Idle timeout - 50s at start, 2min during game
     let idleTimer = setTimeout(() => {
       if (!overRef.current) {
@@ -291,6 +297,7 @@ export default function GamePage() {
       socket.off('draw_offered');
       socket.off('draw_declined');
       socket.off('move_made');
+      socket.off('timer_sync');
     };
   }, [isOnline, gameId, myColor, endGame]); // eslint-disable-line
 
@@ -318,9 +325,21 @@ export default function GamePage() {
         const myTurn = (turn === 'w' && myColor === 'white') || (turn === 'b' && myColor === 'black');
         if (!myTurn) return; // not my turn, don't count down
         if (myColor === 'white') {
-          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+          setWTime((t) => {
+            const newT = t <= 1 ? 0 : t - 1;
+            if (t <= 1) endGame('b', 'timeout');
+            const socket = connectSocket();
+            socket.emit('timer_sync', { gameId, wTime: newT, bTime: null });
+            return newT;
+          });
         } else {
-          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+          setBTime((t) => {
+            const newT = t <= 1 ? 0 : t - 1;
+            if (t <= 1) endGame('w', 'timeout');
+            const socket = connectSocket();
+            socket.emit('timer_sync', { gameId, wTime: null, bTime: newT });
+            return newT;
+          });
         }
       } else {
         // Bot game: count both timers

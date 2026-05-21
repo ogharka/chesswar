@@ -200,11 +200,13 @@ export default function GamePage() {
 
   /* online game socket */
   useEffect(() => {
+    console.log('Online game setup:', { isOnline, gameId, myColor });
     if (!isOnline || !gameId) return;
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
 
     socket.on('opponent_move', ({ move }) => {
+      console.log('Opponent move received:', move);
       const result = chessRef.current.move(move);
       if (result) {
         setFen(chessRef.current.fen());

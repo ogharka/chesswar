@@ -240,25 +240,7 @@ export default function GamePage() {
       else setWTime(oppW);
     });
 
-    // Idle timeout - 50s at start, 2min during game
-    let idleTimer = setTimeout(() => {
-      if (!overRef.current) {
-        endGame('b', 'timeout');
-        socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
-      }
-    }, 50000); // 50 seconds to make first move
-
-    const resetIdle = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        if (!overRef.current) {
-          endGame('b', 'timeout');
-          socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
-        }
-      }, 120000); // 2 minutes during game
-    };
-
-    socket.on('move_made', resetIdle);
+    // No idle timeout - chess clock handles time
     socket.on('opponent_move', ({ move }) => {
       const chess = chessRef.current;
       const res = chess.move(move);
@@ -291,12 +273,10 @@ export default function GamePage() {
     });
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
     return () => {
-      clearTimeout(idleTimer);
       socket.off('opponent_move');
       socket.off('game_ended');
       socket.off('draw_offered');
       socket.off('draw_declined');
-      socket.off('move_made');
       socket.off('timer_sync');
     };
   }, [isOnline, gameId, myColor, endGame]); // eslint-disable-line

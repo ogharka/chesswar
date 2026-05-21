@@ -198,6 +198,45 @@ export default function GamePage() {
     return true;
   }, [endGame, sfx, timeOpt.inc]);
 
+  /* online game socket */
+  useEffect(() => {
+    if (!isOnline || !gameId) return;
+    const socket = connectSocket();
+    socket.emit('join_game', { gameId });
+
+    socket.on('opponent_move', ({ move }) => {
+      const result = chessRef.current.move(move);
+      if (result) {
+        setFen(chessRef.current.fen());
+        setMoves(chessRef.current.history());
+        if (chessRef.current.isCheckmate()) endGame(myColor === 'white' ? 'b' : 'w', 'checkmate');
+        else if (chessRef.current.isDraw()) endGame('d', 'draw');
+      }
+    });
+
+    socket.on('game_ended', ({ winner, reason }) => {
+      const won = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
+      endGame(won ? 'w' : winner === 'draw' ? 'd' : 'b', reason);
+    });
+
+    socket.on('draw_offered', () => {
+      if (window.confirm('Opponent offers a draw. Accept?')) {
+        socket.emit('draw_response', { gameId, accepted: true });
+      } else {
+        socket.emit('draw_response', { gameId, accepted: false });
+      }
+    });
+
+    socket.on('draw_declined', () => toast.error('Opponent declined draw'));
+
+    return () => {
+      socket.off('opponent_move');
+      socket.off('game_ended');
+      socket.off('draw_offered');
+      socket.off('draw_declined');
+    };
+  }, [isOnline, gameId, myColor, endGame]);
+
   /* bot */
   useEffect(() => {
     if (!started || over || !isBot || chessRef.current.turn() !== 'b') return;

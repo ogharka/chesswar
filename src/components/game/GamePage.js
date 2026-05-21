@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { connectSocket } from '../../utils/socket';
 
@@ -113,6 +113,14 @@ export default function GamePage() {
   const isBet = mode === 'bet';
   const isBot  = mode === 'bot';
 
+  // Online game state from navigation
+  const location  = useLocation();
+  const locState  = location.state || {};
+  const isOnline  = locState.online  || false;
+  const gameId    = locState.gameId  || null;
+  const myColor   = locState.color   || 'white'; // 'white' or 'black'
+  const oppData   = locState.opponent || null;
+
   /* config */
   const [configured, setConfigured] = useState(false);
   const [timeOpt,   setTimeOpt]   = useState(TIME_OPTS[2]);
@@ -170,7 +178,7 @@ export default function GamePage() {
       gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
     });
-    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isOnline && oppData ? oppData.username : 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });

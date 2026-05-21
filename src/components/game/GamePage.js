@@ -490,7 +490,7 @@ export default function GamePage() {
             <div className="gp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>
-        <Timer seconds={bTime} active={started && !over && turn==='b'} side="black" inc={timeOpt.inc} />
+        <Timer seconds={isOnline && myColor==='black' ? wTime : bTime} active={started && !over && turn===(isOnline && myColor==='black' ? 'w' : 'b')} side="black" inc={timeOpt.inc} />
       </div>
 
       {/* Board */}
@@ -521,7 +521,7 @@ export default function GamePage() {
             <div className="gp-caps">{capW.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>
-        <Timer seconds={wTime} active={started && !over && turn==='w'} side="white" inc={timeOpt.inc} />
+        <Timer seconds={isOnline && myColor==='black' ? bTime : wTime} active={started && !over && turn===(isOnline && myColor==='black' ? 'b' : 'w')} side="white" inc={timeOpt.inc} />
       </div>
 
       {/* Battle log */}

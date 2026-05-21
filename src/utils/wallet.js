@@ -17,7 +17,7 @@ export const BASE_SEPOLIA = {
 };
 
 // ─── Switch to BASE_CHAIN for mainnet deployment ───────────────────────────
-export const TARGET = BASE_SEPOLIA;
+export const TARGET = BASE_MAINNET;
 
 // USDC contract addresses
 export const USDC_ADDRESS = {

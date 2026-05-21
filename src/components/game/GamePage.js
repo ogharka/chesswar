@@ -3,6 +3,7 @@ import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { connectSocket } from '../../utils/socket';
 
 import { getBotMove, diffLabel } from '../../utils/chessBot';
 import toast from 'react-hot-toast';
@@ -143,6 +144,12 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
+  // Online game state
+  const locationState = window.history.state?.usr || {};
+  const isOnline  = locationState.online || false;
+  const gameId    = locationState.gameId || null;
+  const myColor   = locationState.color  || 'white';
+  const opponent  = locationState.opponent || null;
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 

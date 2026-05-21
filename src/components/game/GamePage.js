@@ -151,6 +151,7 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
+  const [firstMove,    setFirstMove]    = useState(false);
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -188,6 +189,7 @@ export default function GamePage() {
     else if (res.flags.includes('k') || res.flags.includes('q')) sfx('castle');
     else sfx('move');
     setFen(chess.fen()); setTurn(chess.turn()); setMoves((m) => [...m, res]);
+    if (isOnline) setFirstMove(true);
     setHilights({ [res.from]: { background: 'rgba(201,168,76,0.5)' }, [res.to]: { background: 'rgba(201,168,76,0.5)' } });
     setSelected(null);
     if (chess.isCheckmate()) {
@@ -306,6 +308,7 @@ export default function GamePage() {
   /* timer */
   useEffect(() => {
     if (!started || over) return;
+    if (isOnline && !firstMove) return; // don't start timer until first move
     timerRef.current = setInterval(() => {
       if (overRef.current) { clearInterval(timerRef.current); return; }
       const turn = chessRef.current.turn();
@@ -401,12 +404,14 @@ export default function GamePage() {
   const rematch = () => { reset(); setStarted(true); };
   const resign = () => {
     if (!started || over) return;
+    if (isOnline && !firstMove) return; // don't start timer until first move
     if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
     endGame('b', 'resignation');
   };
 
   const abort = () => {
     if (!started || over) return;
+    if (isOnline && !firstMove) return; // don't start timer until first move
     if (moves.length > 1) { toast.error('Cannot abort after move 2'); return; }
     clearInterval(timerRef.current);
     overRef.current = true;
@@ -417,6 +422,7 @@ export default function GamePage() {
 
   const offerDraw = () => {
     if (!started || over) return;
+    if (isOnline && !firstMove) return; // don't start timer until first move
     setDrawOffer(true);
     toast('Draw offered — waiting for opponent', { duration: 3000 });
     // In PvP this would send via WebSocket

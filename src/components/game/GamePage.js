@@ -222,13 +222,21 @@ export default function GamePage() {
         setFen(chess.fen());
         setTurn(chess.turn());
         setMoves(m => [...m, res]);
-        if (chess.isCheckmate()) endGame(myColor === 'white' ? 'b' : 'w', 'checkmate');
-        else if (chess.isDraw()) endGame('d', 'draw');
+        // After opponent moves, if checkmate then WE lost
+        if (chess.isCheckmate()) {
+          endGame('b', 'checkmate'); // we lost
+          socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'checkmate' });
+        } else if (chess.isDraw()) {
+          endGame('d', 'draw');
+          socket.emit('game_over', { gameId, winner: 'draw', reason: 'draw' });
+        }
       }
     });
     socket.on('game_ended', ({ winner, reason }) => {
-      const won = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
-      endGame(won ? 'w' : winner === 'draw' ? 'd' : 'b', reason);
+      if (overRef.current) return; // already ended locally
+      const won  = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
+      const draw = winner === 'draw';
+      endGame(won ? 'w' : draw ? 'd' : 'b', reason);
     });
     socket.on('draw_offered', () => {
       if (window.confirm('Opponent offers a draw. Accept?')) {

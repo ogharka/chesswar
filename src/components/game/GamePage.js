@@ -3,9 +3,9 @@ import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { connectSocket } from '../../utils/socket';
 
 import { getBotMove, diffLabel } from '../../utils/chessBot';
+import { connectSocket } from '../../utils/socket';
 import toast from 'react-hot-toast';
 
 /* ── Sound ── */
@@ -113,13 +113,12 @@ export default function GamePage() {
   const isBet = mode === 'bet';
   const isBot  = mode === 'bot';
 
-  // Online game state from navigation
-  const location  = useLocation();
-  const locState  = location.state || {};
-  const isOnline  = locState.online  || false;
-  const gameId    = locState.gameId  || null;
-  const myColor   = locState.color   || 'white'; // 'white' or 'black'
-  const oppData   = locState.opponent || null;
+  const location = useLocation();
+  const locState = location.state || {};
+  const isOnline = locState.online || false;
+  const gameId   = locState.gameId || null;
+  const myColor  = locState.color  || 'white';
+  const oppData  = locState.opponent || null;
 
   /* config */
   const [configured, setConfigured] = useState(false);
@@ -152,7 +151,6 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
-  // Online game state
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -173,7 +171,7 @@ export default function GamePage() {
       gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
     });
-    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isOnline && oppData ? oppData.username : 'Opponent', pointsEarned: earned });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
@@ -195,32 +193,43 @@ export default function GamePage() {
     if (chess.isCheckmate()) { endGame(chess.turn() === 'w' ? 'b' : 'w', 'checkmate'); return true; }
     if (chess.isDraw())      { endGame('d', 'draw'); return true; }
     if (chess.isCheck())     { sfx('check'); toast('⚠️ Check!', { duration: 1000 }); }
+    // Send move to opponent if online
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('make_move', { gameId, move: mv, fen: chess.fen() });
+    }
     return true;
-  }, [endGame, sfx, timeOpt.inc]);
+  }, [endGame, sfx, timeOpt.inc, isOnline, gameId]);
 
-  /* online game socket */
+
+  // Auto-start online games
   useEffect(() => {
-    console.log('Online game setup:', { isOnline, gameId, myColor });
+    if (isOnline && !configured) {
+      setStarted(true);
+      setConfigured(true);
+    }
+  }, [isOnline]); // eslint-disable-line
+
+  // Socket handlers for online games
+  useEffect(() => {
     if (!isOnline || !gameId) return;
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
-
     socket.on('opponent_move', ({ move }) => {
-      console.log('Opponent move received:', move);
-      const result = chessRef.current.move(move);
-      if (result) {
-        setFen(chessRef.current.fen());
-        setMoves(chessRef.current.history());
-        if (chessRef.current.isCheckmate()) endGame(myColor === 'white' ? 'b' : 'w', 'checkmate');
-        else if (chessRef.current.isDraw()) endGame('d', 'draw');
+      const chess = chessRef.current;
+      const res = chess.move(move);
+      if (res) {
+        setFen(chess.fen());
+        setTurn(chess.turn());
+        setMoves(m => [...m, res]);
+        if (chess.isCheckmate()) endGame(myColor === 'white' ? 'b' : 'w', 'checkmate');
+        else if (chess.isDraw()) endGame('d', 'draw');
       }
     });
-
     socket.on('game_ended', ({ winner, reason }) => {
       const won = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
       endGame(won ? 'w' : winner === 'draw' ? 'd' : 'b', reason);
     });
-
     socket.on('draw_offered', () => {
       if (window.confirm('Opponent offers a draw. Accept?')) {
         socket.emit('draw_response', { gameId, accepted: true });
@@ -228,16 +237,14 @@ export default function GamePage() {
         socket.emit('draw_response', { gameId, accepted: false });
       }
     });
-
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
-
     return () => {
       socket.off('opponent_move');
       socket.off('game_ended');
       socket.off('draw_offered');
       socket.off('draw_declined');
     };
-  }, [isOnline, gameId, myColor, endGame]);
+  }, [isOnline, gameId, myColor, endGame]); // eslint-disable-line
 
   /* bot */
   useEffect(() => {
@@ -272,6 +279,10 @@ export default function GamePage() {
   /* click */
   const onSquareClick = (sq) => {
     if (!started || over || promo) return;
+    if (isOnline) {
+      const turn = chessRef.current.turn();
+      if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return;
+    }
     const chess = chessRef.current, piece = chess.get(sq);
     if (!selected) {
       if (piece && piece.color === chess.turn()) {
@@ -301,6 +312,10 @@ export default function GamePage() {
 
   const onDrop = (from, to) => {
     if (!started || over) return false;
+    if (isOnline) {
+      const turn = chessRef.current.turn();
+      if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return false;
+    }
     if (isPromo(from, to)) { setPromo({ from, to }); return false; }
     return applyMove({ from, to, promotion: 'q' });
   };
@@ -355,16 +370,7 @@ export default function GamePage() {
   };
 
   /* ── Config screen ── */
-  // Auto-start online games
-  useEffect(() => {
-    if (isOnline && !configured) {
-      const tc = TIME_OPTS.find(t => t.base === (locState.timeControl * 60)) || TIME_OPTS[2];
-      setTimeOpt(tc);
-      setConfigured(true);
-    }
-  }, [isOnline, configured, locState.timeControl]);
-
-  if (!configured && !isOnline) {
+  if (!configured) {
     return (
       <div className="config-screen">
         <div className="config-card">
@@ -451,7 +457,7 @@ export default function GamePage() {
         <div className="gp-left">
           <div className="gp-av">{isBot ? '🤖' : '♟'}</div>
           <div>
-            <div className="gp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : 'Opponent'}</div>
+            <div className="gp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : isOnline && oppData ? oppData.username : 'Opponent'}</div>
             <div className="gp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>
@@ -466,7 +472,7 @@ export default function GamePage() {
             position={fen}
             onSquareClick={onSquareClick}
             onPieceDrop={onDrop}
-            boardOrientation={flipped ? 'black' : 'white'}
+            boardOrientation={isOnline ? myColor : (flipped ? 'black' : 'white')}
             customSquareStyles={hilights}
             customBoardStyle={{ borderRadius: '0', overflow: 'hidden' }}
             customDarkSquareStyle={{ backgroundColor: '#B58863' }}
@@ -594,7 +600,7 @@ export default function GamePage() {
           </div>
           <div className="go-actions">
             <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
-            <button className="go-btn" onClick={exportPGN}>PGN</button>
+            <button className="go-btn" onClick={exportPGN}>Save Game</button>
             <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
           </div>
         </div>

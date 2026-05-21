@@ -13,7 +13,7 @@ export const BASE_SEPOLIA = {
   chainName: 'Base',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
   rpcUrls: ['https://mainnet.base.org'],
-  blockExplorerUrls: ['https://sepolia.basescan.org'],
+  blockExplorerUrls: ['https://basescan.org'],
 };
 
 // ─── Switch to BASE_CHAIN for mainnet deployment ───────────────────────────

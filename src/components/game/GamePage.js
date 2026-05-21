@@ -353,7 +353,16 @@ export default function GamePage() {
   };
 
   /* ── Config screen ── */
-  if (!configured) {
+  // Auto-start online games
+  useEffect(() => {
+    if (isOnline && !configured) {
+      const tc = TIME_OPTS.find(t => t.base === (locState.timeControl * 60)) || TIME_OPTS[2];
+      setTimeOpt(tc);
+      setConfigured(true);
+    }
+  }, [isOnline, configured, locState.timeControl]);
+
+  if (!configured && !isOnline) {
     return (
       <div className="config-screen">
         <div className="config-card">

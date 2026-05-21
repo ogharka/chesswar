@@ -10,9 +10,9 @@ export const BASE_CHAIN = {
 
 export const BASE_SEPOLIA = {
   chainId: '0x14a34',
-  chainName: 'Base Sepolia',
+  chainName: 'Base',
   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-  rpcUrls: ['https://sepolia.base.org'],
+  rpcUrls: ['https://mainnet.base.org'],
   blockExplorerUrls: ['https://sepolia.basescan.org'],
 };
 
@@ -21,7 +21,7 @@ export const TARGET = BASE_SEPOLIA;
 
 // USDC contract addresses
 export const USDC_ADDRESS = {
-  // Base Sepolia testnet
+  // Base testnet
   '0x14a34': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
   // Base Mainnet
   '0x2105':  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',

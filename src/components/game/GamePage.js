@@ -153,11 +153,6 @@ export default function GamePage() {
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
   // Online game state
-  const locationState = window.history.state?.usr || {};
-  const isOnline  = locationState.online || false;
-  const gameId    = locationState.gameId || null;
-  const myColor   = locationState.color  || 'white';
-  const opponent  = locationState.opponent || null;
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 

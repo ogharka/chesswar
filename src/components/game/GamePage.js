@@ -320,34 +320,11 @@ export default function GamePage() {
       if (overRef.current) { clearInterval(timerRef.current); return; }
       const turn = chessRef.current.turn();
 
-      if (isOnline) {
-        // Online: each player only counts down their OWN timer
-        const myTurn = (turn === 'w' && myColor === 'white') || (turn === 'b' && myColor === 'black');
-        if (!myTurn) return; // not my turn, don't count down
-        if (myColor === 'white') {
-          setWTime((t) => {
-            const newT = t <= 1 ? 0 : t - 1;
-            if (t <= 1) endGame('b', 'timeout');
-            const socket = connectSocket();
-            socket.emit('timer_sync', { gameId, wTime: newT, bTime: null });
-            return newT;
-          });
-        } else {
-          setBTime((t) => {
-            const newT = t <= 1 ? 0 : t - 1;
-            if (t <= 1) endGame('w', 'timeout');
-            const socket = connectSocket();
-            socket.emit('timer_sync', { gameId, wTime: null, bTime: newT });
-            return newT;
-          });
-        }
+      // Both online and bot: count active player's timer
+      if (turn === 'w') {
+        setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
       } else {
-        // Bot game: count both timers
-        if (turn === 'w') {
-          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
-        } else {
-          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
-        }
+        setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
       }
     }, 1000);
     return () => clearInterval(timerRef.current);

@@ -287,15 +287,27 @@ export default function GamePage() {
     timerRef.current = setInterval(() => {
       if (overRef.current) { clearInterval(timerRef.current); return; }
       const turn = chessRef.current.turn();
-      // In online games only count down the current player's timer
-      if (turn === 'w') {
-        setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+
+      if (isOnline) {
+        // Online: each player only counts down their OWN timer
+        const myTurn = (turn === 'w' && myColor === 'white') || (turn === 'b' && myColor === 'black');
+        if (!myTurn) return; // not my turn, don't count down
+        if (myColor === 'white') {
+          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+        } else {
+          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        }
       } else {
-        setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        // Bot game: count both timers
+        if (turn === 'w') {
+          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+        } else {
+          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        }
       }
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [started, over, endGame]);
+  }, [started, over, isOnline, myColor, endGame]);
 
  // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -231,6 +231,26 @@ export default function GamePage() {
     if (!isOnline || !gameId) return;
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
+
+    // Idle timeout - 50s at start, 2min during game
+    let idleTimer = setTimeout(() => {
+      if (!overRef.current) {
+        endGame('b', 'timeout');
+        socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
+      }
+    }, 50000); // 50 seconds to make first move
+
+    const resetIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (!overRef.current) {
+          endGame('b', 'timeout');
+          socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
+        }
+      }, 120000); // 2 minutes during game
+    };
+
+    socket.on('move_made', resetIdle);
     socket.on('opponent_move', ({ move }) => {
       const chess = chessRef.current;
       const res = chess.move(move);
@@ -263,10 +283,12 @@ export default function GamePage() {
     });
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
     return () => {
+      clearTimeout(idleTimer);
       socket.off('opponent_move');
       socket.off('game_ended');
       socket.off('draw_offered');
       socket.off('draw_declined');
+      socket.off('move_made');
     };
   }, [isOnline, gameId, myColor, endGame]); // eslint-disable-line
 
@@ -617,14 +639,16 @@ export default function GamePage() {
         <div className="go-modal">
           <div className={`go-banner ${over.winner==='w' ? 'go-win' : over.winner==='d' ? 'go-draw' : 'go-loss'}`}>
             <div className="go-title">
-              {over.winner==='w' ? 'Victory!' : over.winner==='d' ? 'Draw' : 'Defeated'}
+              {over.winner==='w' ? '🏆 Victory!' : over.winner==='d' ? '🤝 Draw' : '💀 Defeated'}
             </div>
             <div className="go-reason">
-              {over.reason==='checkmate'   && (over.winner==='w' ? 'Checkmate' : 'Your king has fallen')}
+              {over.reason==='checkmate'   && (over.winner==='w' ? 'Checkmate — brilliant!' : 'Your king has fallen')}
               {over.reason==='resignation' && (over.winner==='w' ? 'Opponent resigned' : 'You resigned')}
-              {over.reason==='timeout'     && (over.winner==='w' ? 'Opponent out of time' : 'Time expired')}
+              {over.reason==='timeout'     && (over.winner==='w' ? 'Opponent ran out of time' : 'Time expired')}
+              {over.reason==='idle'        && (over.winner==='w' ? 'Opponent went idle' : 'You went idle')}
+              {over.reason==='disconnect'  && (over.winner==='w' ? 'Opponent disconnected' : 'You disconnected')}
               {over.reason==='draw'        && 'Game drawn by agreement'}
-              {over.reason==='aborted'     && 'Game aborted'}
+              {over.reason==='aborted'     && 'Game aborted — no penalty'}
             </div>
           </div>
           <div className="go-stats">
@@ -640,9 +664,10 @@ export default function GamePage() {
             )}
           </div>
           <div className="go-actions">
-            <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>
-            <button className="go-btn" onClick={exportPGN}>Save Game</button>
-            <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
+            {!isOnline && <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>}
+            {isOnline && <button className="go-btn go-rematch" onClick={() => navigate('/')}>New Game</button>}
+            <button className="go-btn" onClick={exportPGN}>Save</button>
+            <button className="go-btn go-home" onClick={() => navigate('/')}>Exit</button>
           </div>
         </div>
       </div>

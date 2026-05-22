@@ -428,6 +428,10 @@ export default function GamePage() {
   const resign = () => {
     if (!started || over) return;
     if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
+    }
     endGame('b', 'resignation');
   };
 
@@ -660,6 +664,10 @@ export default function GamePage() {
           <button className="gs-item gs-resign" onClick={() => {
             if (started && !over) {
               if (!window.confirm('Leaving counts as resign. You will lose' + (isBet ? ' and forfeit your bet.' : '.'))) return;
+              if (isOnline && gameId) {
+                const socket = connectSocket();
+                socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
+              }
               endGame('b', 'resignation');
               setTimeout(() => navigate('/'), 1500);
             } else { navigate('/'); }

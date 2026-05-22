@@ -637,7 +637,7 @@ export default function GamePage() {
             </div>
           </div>
           <div className="go-stats">
-            <div className="go-row"><span>Points earned</span><strong className="gold">+{over.earned}</strong></div>
+            <div className="go-row"><span>Points {over.earned >= 0 ? "earned" : "lost"}</span><strong className={over.earned >= 0 ? "gold" : "red"}>{over.earned >= 0 ? "+" : ""}{over.earned}</strong></div>
             <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
             {isBet && (
               <div className="go-row">

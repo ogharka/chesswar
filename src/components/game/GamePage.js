@@ -438,11 +438,14 @@ export default function GamePage() {
   const abort = () => {
     if (!started || over) return;
     if (moves.length > 1) { toast.error('Cannot abort after move 2'); return; }
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('game_over', { gameId, winner: 'draw', reason: 'aborted' });
+    }
     clearInterval(timerRef.current);
     overRef.current = true;
     setOver({ winner: null, reason: 'aborted', earned: 0 });
-    if (isBet) toast('Game aborted — bet refunded');
-    else toast('Game aborted');
+    toast(isBet ? 'Game aborted — bet refunded' : 'Game aborted');
   };
 
   const offerDraw = () => {

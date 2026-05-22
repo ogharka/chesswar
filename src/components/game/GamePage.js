@@ -151,7 +151,6 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
-  const [reviewIdx,    setReviewIdx]    = useState(-1); // -1 = live position
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -163,9 +162,9 @@ export default function GamePage() {
     overRef.current = true;
     clearInterval(timerRef.current);
     const won = winner === 'w', draw = winner === 'd';
-    // Points: win=20, draw=5, loss=−10, resign=−20
-    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? -20 : -10;
-    const earned = addPoints(base, `${mode} · ${reason}`, isBet);
+    // Resign/Leave = 0 pts for loser, draw = 5, loss by checkmate/timeout = 10, win = 20
+    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? 0 : 10;
+    const earned = base > 0 ? addPoints(base, `${mode} · ${reason}`, isBet) : 0;
     updateProfile({
       gamesPlayed: profile.gamesPlayed + 1,
       gamesWon:    won  ? profile.gamesWon  + 1 : profile.gamesWon,
@@ -233,13 +232,25 @@ export default function GamePage() {
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
 
-    // Receive opponent timer updates
-    socket.on('timer_sync', ({ wTime: oppW, bTime: oppB }) => {
-      if (myColor === 'white') setBTime(oppB);
-      else setWTime(oppW);
-    });
+    // Idle timeout - 50s at start, 2min during game
+    let idleTimer = setTimeout(() => {
+      if (!overRef.current) {
+        endGame('b', 'timeout');
+        socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
+      }
+    }, 50000); // 50 seconds to make first move
 
-    // No idle timeout - chess clock handles time
+    const resetIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (!overRef.current) {
+          endGame('b', 'timeout');
+          socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'idle' });
+        }
+      }, 120000); // 2 minutes during game
+    };
+
+    socket.on('move_made', resetIdle);
     socket.on('opponent_move', ({ move }) => {
       const chess = chessRef.current;
       const res = chess.move(move);
@@ -272,11 +283,12 @@ export default function GamePage() {
     });
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
     return () => {
+      clearTimeout(idleTimer);
       socket.off('opponent_move');
       socket.off('game_ended');
       socket.off('draw_offered');
       socket.off('draw_declined');
-      socket.off('timer_sync');
+      socket.off('move_made');
     };
   }, [isOnline, gameId, myColor, endGame]); // eslint-disable-line
 
@@ -294,16 +306,26 @@ export default function GamePage() {
   /* timer */
   useEffect(() => {
     if (!started || over) return;
-    // timer runs immediately
     timerRef.current = setInterval(() => {
       if (overRef.current) { clearInterval(timerRef.current); return; }
       const turn = chessRef.current.turn();
 
-      // Both online and bot: count active player's timer
-      if (turn === 'w') {
-        setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+      if (isOnline) {
+        // Online: each player only counts down their OWN timer
+        const myTurn = (turn === 'w' && myColor === 'white') || (turn === 'b' && myColor === 'black');
+        if (!myTurn) return; // not my turn, don't count down
+        if (myColor === 'white') {
+          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+        } else {
+          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        }
       } else {
-        setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        // Bot game: count both timers
+        if (turn === 'w') {
+          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
+        } else {
+          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
+        }
       }
     }, 1000);
     return () => clearInterval(timerRef.current);
@@ -325,16 +347,16 @@ export default function GamePage() {
       if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return;
     }
     const chess = chessRef.current, piece = chess.get(sq);
-    // If clicking own piece - select it (even if another piece already selected)
-    if (piece && piece.color === chess.turn()) {
-      setSelected(sq);
-      const legal = chess.moves({ square: sq, verbose: true });
-      const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
-      legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
-      setHilights(h);
+    if (!selected) {
+      if (piece && piece.color === chess.turn()) {
+        setSelected(sq);
+        const legal = chess.moves({ square: sq, verbose: true });
+        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+        legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+        setHilights(h);
+      }
       return;
     }
-    if (!selected) return;
     if (isPromo(selected, sq)) {
       const legal = chess.moves({ square: selected, verbose: true }).map((m) => m.to);
       if (legal.includes(sq)) { setPromo({ from: selected, to: sq }); setSelected(null); setHilights({}); return; }
@@ -381,10 +403,6 @@ export default function GamePage() {
     if (!started || over) return;
     if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
     endGame('b', 'resignation');
-    if (isOnline && gameId) {
-      const socket = connectSocket();
-      socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
-    }
   };
 
   const abort = () => {
@@ -393,21 +411,17 @@ export default function GamePage() {
     clearInterval(timerRef.current);
     overRef.current = true;
     setOver({ winner: null, reason: 'aborted', earned: 0 });
-    if (isOnline && gameId) {
-      const socket = connectSocket();
-      socket.emit('game_over', { gameId, winner: 'draw', reason: 'aborted' });
-    }
-    toast(isBet ? 'Game aborted — bet refunded' : 'Game aborted');
+    if (isBet) toast('Game aborted — bet refunded');
+    else toast('Game aborted');
   };
 
   const offerDraw = () => {
     if (!started || over) return;
     setDrawOffer(true);
-    if (isOnline && gameId) {
-      const socket = connectSocket();
-      socket.emit('offer_draw', { gameId });
-    }
     toast('Draw offered — waiting for opponent', { duration: 3000 });
+    // In PvP this would send via WebSocket
+    // vs bot — bot accepts/declines randomly
+
   };
 
   const shareGame = () => {
@@ -518,16 +532,14 @@ export default function GamePage() {
         <div className="game-board-inner">
       <div className="game-board-area">
           <Chessboard
-            position={over && reviewIdx >= 0 ? reviewFen : fen}
+            position={fen}
             onSquareClick={onSquareClick}
             onPieceDrop={onDrop}
             boardOrientation={isOnline ? myColor : (flipped ? 'black' : 'white')}
             customSquareStyles={hilights}
-            customBoardStyle={{ borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
-            customDarkSquareStyle={{ backgroundColor: '#4a7c59' }}
-            customLightSquareStyle={{ backgroundColor: '#e8edcd' }}
-            customPremoveDarkSquareStyle={{ backgroundColor: '#3d6b4c' }}
-            customPremoveLightSquareStyle={{ backgroundColor: '#d4dab8' }}
+            customBoardStyle={{ borderRadius: '0', overflow: 'hidden' }}
+            customDarkSquareStyle={{ backgroundColor: '#B58863' }}
+            customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
             areArrowsAllowed
           />
       </div>
@@ -640,7 +652,7 @@ export default function GamePage() {
             </div>
           </div>
           <div className="go-stats">
-            <div className="go-row"><span>Points {over.earned >= 0 ? "earned" : "lost"}</span><strong className={over.earned >= 0 ? "gold" : "red"}>{over.earned >= 0 ? "+" : ""}{over.earned}</strong></div>
+            <div className="go-row"><span>Points earned</span><strong className="gold">+{over.earned}</strong></div>
             <div className="go-row"><span>NFT boost</span><strong>{nftBoost}×</strong></div>
             {isBet && (
               <div className="go-row">
@@ -657,18 +669,6 @@ export default function GamePage() {
             <button className="go-btn" onClick={exportPGN}>Save</button>
             <button className="go-btn go-home" onClick={() => navigate('/')}>Exit</button>
           </div>
-          {/* Review moves */}
-          {moves.length > 0 && (
-            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'0 20px 16px',borderTop:'1px solid var(--border)',paddingTop:12}}>
-              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(0)}>⏮</button>
-              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(i => Math.max(0, (i < 0 ? moves.length-1 : i) - 1))}>◀</button>
-              <span style={{fontSize:13,color:'var(--t3)',flex:2,textAlign:'center'}}>
-                {reviewIdx < 0 ? 'Final' : `Move ${reviewIdx + 1}/${moves.length}`}
-              </span>
-              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(i => i >= moves.length-1 ? -1 : (i < 0 ? 0 : i + 1))}>▶</button>
-              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(-1)}>⏭</button>
-            </div>
-          )}
         </div>
       </div>
     )}

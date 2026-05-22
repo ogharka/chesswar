@@ -41,7 +41,7 @@ export default function Dashboard() {
       socket.emit('join_queue', {
         betAmount: 'free',
         username: profile.username || 'Anonymous',
-        address: ''
+        address: wallet?.address || ''
       });
       socket.on('game_found', ({ gameId, color, opponent }) => {
         setSearching(false);
@@ -57,7 +57,7 @@ export default function Dashboard() {
       socket.emit('join_queue', {
         betAmount: betAmt,
         username: profile.username || 'Anonymous',
-        address: ''
+        address: wallet?.address || ''
       });
       socket.on('game_found', ({ gameId, color, opponent, betAmount: bAmt }) => {
         setSearching(false);

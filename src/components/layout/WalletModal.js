@@ -68,6 +68,7 @@ export default function WalletModal({ onClose }) {
       });
       await loadBalances();
       setAmount('');
+      try { await fetch('https://ws.chesswar.xyz/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ address: wallet.address, amount: n }) }); } catch(e) {}
       toast.success(`Deposited ${n} USDC successfully!`);
     } catch (err) {
       toast.error(err.message || 'Deposit failed');

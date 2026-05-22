@@ -17,7 +17,7 @@ const BET_PRESETS = ['0.10', '0.50', '1.00', '5.00'];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { points, nftBoost, profile, gameHistory } = useStore();
+  const { points, nftBoost, profile, gameHistory, wallet } = useStore();
 
   const [selTime,    setSelTime]    = useState(5);
   const [mode,       setMode]       = useState('bot'); // bot | bet | pvp

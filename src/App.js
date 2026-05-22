@@ -20,6 +20,28 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [showUsername, setShowUsername] = useState(false);
 
+  // Base App SDK
+  useEffect(() => {
+    const initBaseApp = async () => {
+      try {
+        const { sdk } = await import('@farcaster/frame-sdk');
+        await sdk.actions.ready();
+      } catch {}
+    };
+    initBaseApp();
+  }, []);
+
+  // Base App SDK
+  useEffect(() => {
+    const initBaseApp = async () => {
+      try {
+        const { sdk } = await import('@farcaster/frame-sdk');
+        await sdk.actions.ready();
+      } catch {}
+    };
+    initBaseApp();
+  }, []);
+
   useEffect(() => {
     const tryReconnect = async () => {
       if (localStorage.getItem("cw_just_disconnected")) {

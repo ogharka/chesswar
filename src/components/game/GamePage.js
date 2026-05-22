@@ -294,7 +294,8 @@ export default function GamePage() {
       }
     });
     socket.on('game_ended', ({ winner, reason }) => {
-      if (overRef.current) return; // already ended locally
+      // Always process disconnect - don't ignore even if game ended locally
+      if (overRef.current && reason !== 'disconnect') return;
       const won  = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
       const draw = winner === 'draw';
       endGame(won ? 'w' : draw ? 'd' : 'b', reason);

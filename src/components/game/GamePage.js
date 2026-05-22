@@ -668,6 +668,10 @@ export default function GamePage() {
                 const socket = connectSocket();
                 socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
               }
+              if (isOnline && gameId) {
+                const socket = connectSocket();
+                socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
+              }
               endGame('b', 'resignation');
               setTimeout(() => navigate('/'), 1500);
             } else { navigate('/'); }

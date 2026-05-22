@@ -306,7 +306,7 @@ export default function GamePage() {
       }
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [started, over, isOnline, myColor, endGame, firstMove]);
+  }, [started, over, isOnline, myColor, endGame]);
 
  // eslint-disable-line react-hooks/exhaustive-deps
 

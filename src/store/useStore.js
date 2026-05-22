@@ -50,9 +50,10 @@ export const useStore = create(
 
       addPoints: (base, reason, isBet) => {
         const s = get();
-        const total = Math.round(base * s.nftBoost * (isBet ? 5 : 1));
+        const multiplier = base < 0 ? 1 : s.nftBoost * (isBet ? 5 : 1);
+        const total = Math.round(base * multiplier);
         set((st) => ({
-          points: st.points + total,
+          points: Math.max(0, st.points + total),
           pointsLog: [
             { id: Date.now(), amount: total, base, nftBoost: s.nftBoost, isBet, reason, ts: Date.now() },
             ...st.pointsLog,

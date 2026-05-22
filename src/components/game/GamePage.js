@@ -163,7 +163,7 @@ export default function GamePage() {
     clearInterval(timerRef.current);
     const won = winner === 'w', draw = winner === 'd';
     // Resign/Leave = 0 pts for loser, draw = 5, loss by checkmate/timeout = 10, win = 20
-    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? 0 : 10;
+    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? -20 : -10;
     const earned = base > 0 ? addPoints(base, `${mode} · ${reason}`, isBet) : 0;
     updateProfile({
       gamesPlayed: profile.gamesPlayed + 1,

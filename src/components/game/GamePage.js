@@ -151,6 +151,7 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
+  const [reviewIdx,    setReviewIdx]    = useState(-1); // -1 = live position
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -517,7 +518,7 @@ export default function GamePage() {
         <div className="game-board-inner">
       <div className="game-board-area">
           <Chessboard
-            position={fen}
+            position={over && reviewIdx >= 0 ? reviewFen : fen}
             onSquareClick={onSquareClick}
             onPieceDrop={onDrop}
             boardOrientation={isOnline ? myColor : (flipped ? 'black' : 'white')}
@@ -656,6 +657,18 @@ export default function GamePage() {
             <button className="go-btn" onClick={exportPGN}>Save</button>
             <button className="go-btn go-home" onClick={() => navigate('/')}>Exit</button>
           </div>
+          {/* Review moves */}
+          {moves.length > 0 && (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'0 20px 16px',borderTop:'1px solid var(--border)',paddingTop:12}}>
+              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(0)}>⏮</button>
+              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(i => Math.max(0, (i < 0 ? moves.length-1 : i) - 1))}>◀</button>
+              <span style={{fontSize:13,color:'var(--t3)',flex:2,textAlign:'center'}}>
+                {reviewIdx < 0 ? 'Final' : `Move ${reviewIdx + 1}/${moves.length}`}
+              </span>
+              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(i => i >= moves.length-1 ? -1 : (i < 0 ? 0 : i + 1))}>▶</button>
+              <button className="go-btn" style={{flex:1}} onClick={() => setReviewIdx(-1)}>⏭</button>
+            </div>
+          )}
         </div>
       </div>
     )}

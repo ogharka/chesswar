@@ -51,16 +51,27 @@ export default function Navbar() {
   }, [showDisconnect]);
 
   useEffect(() => {
-    if (!wallet?.address || !window.ethereum) return;
+    if (!wallet?.address) return;
     const load = async () => {
       try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const contract = new ethers.Contract(USDC_ADDR, USDC_ABI, provider);
-        const bal = await contract.balanceOf(wallet.address);
-        setUsdcBal(parseFloat(ethers.formatUnits(bal, 6)).toFixed(2));
-      } catch { setUsdcBal('0.00'); }
+        // Fetch in-app balance from server
+        const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);
+        const data = await res.json();
+        setUsdcBal(parseFloat(data.usdc_balance || 0).toFixed(2));
+      } catch {
+        // Fallback to blockchain balance
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const contract = new ethers.Contract(USDC_ADDR, USDC_ABI, provider);
+          const bal = await contract.balanceOf(wallet.address);
+          setUsdcBal(parseFloat(ethers.formatUnits(bal, 6)).toFixed(2));
+        } catch { setUsdcBal('0.00'); }
+      }
     };
     load();
+    // Refresh every 30 seconds
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, [wallet?.address]);
 
   const path = location.pathname;

@@ -171,8 +171,33 @@ export default function GamePage() {
       gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
     });
-    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isOnline && oppData ? oppData.username : 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
+
+    // Oracle payout for bet games
+    if (isBet && isOnline && won && gameId && window.ethereum) {
+      setTimeout(async () => {
+        try {
+          const { ethers } = await import('ethers');
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const myAddr = await signer.getAddress();
+          const res = await fetch('https://ws.chesswar.xyz/oracle/sign', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId, winnerAddress: myAddr })
+          });
+          const { sig } = await res.json();
+          const betContract = new ethers.Contract(
+            process.env.REACT_APP_BET_ADDRESS,
+            ['function resolveGame(bytes32 gameId, address winner, bytes calldata sig) external'],
+            signer
+          );
+          const tx = await betContract.resolveGame(ethers.encodeBytes32String(gameId), myAddr, sig);
+          await tx.wait();
+          toast.success('Prize claimed! USDC added to your vault.');
+        } catch (e) { console.log('Oracle payout:', e.message); }
+      }, 2000);
+    }
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
   }, [addPoints, addGameResult, betAmt, isBet, mode, profile, sfx, updateProfile]); // eslint-disable-line react-hooks/exhaustive-deps

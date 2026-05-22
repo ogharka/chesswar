@@ -522,9 +522,11 @@ export default function GamePage() {
             onPieceDrop={onDrop}
             boardOrientation={isOnline ? myColor : (flipped ? 'black' : 'white')}
             customSquareStyles={hilights}
-            customBoardStyle={{ borderRadius: '0', overflow: 'hidden' }}
-            customDarkSquareStyle={{ backgroundColor: '#B58863' }}
-            customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
+            customBoardStyle={{ borderRadius: '8px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+            customDarkSquareStyle={{ backgroundColor: '#4a7c59' }}
+            customLightSquareStyle={{ backgroundColor: '#e8edcd' }}
+            customPremoveDarkSquareStyle={{ backgroundColor: '#3d6b4c' }}
+            customPremoveLightSquareStyle={{ backgroundColor: '#d4dab8' }}
             areArrowsAllowed
           />
       </div>

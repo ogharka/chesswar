@@ -378,30 +378,35 @@ export default function GamePage() {
   const rematch = () => { reset(); setStarted(true); };
   const resign = () => {
     if (!started || over) return;
-    // timer runs immediately
     if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
     endGame('b', 'resignation');
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
+    }
   };
 
   const abort = () => {
     if (!started || over) return;
-    // timer runs immediately
     if (moves.length > 1) { toast.error('Cannot abort after move 2'); return; }
     clearInterval(timerRef.current);
     overRef.current = true;
     setOver({ winner: null, reason: 'aborted', earned: 0 });
-    if (isBet) toast('Game aborted — bet refunded');
-    else toast('Game aborted');
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('game_over', { gameId, winner: 'draw', reason: 'aborted' });
+    }
+    toast(isBet ? 'Game aborted — bet refunded' : 'Game aborted');
   };
 
   const offerDraw = () => {
     if (!started || over) return;
-    // timer runs immediately
     setDrawOffer(true);
+    if (isOnline && gameId) {
+      const socket = connectSocket();
+      socket.emit('offer_draw', { gameId });
+    }
     toast('Draw offered — waiting for opponent', { duration: 3000 });
-    // In PvP this would send via WebSocket
-    // vs bot — bot accepts/declines randomly
-
   };
 
   const shareGame = () => {

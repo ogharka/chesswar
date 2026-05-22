@@ -518,9 +518,25 @@ export default function GamePage() {
       {/* Opponent */}
       <div className="game-player">
         <div className="gp-left">
-          <div className="gp-av">{isBot ? '🤖' : '♟'}</div>
+          <div className="gp-av" style={isBot ? {background:'linear-gradient(135deg,#0A0F1E,#0039B3)',border:'2px solid rgba(0,82,255,0.6)',boxShadow:'0 0 12px rgba(0,82,255,0.4)',overflow:'hidden',padding:0} : {}}>
+            {isBot ? (
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <rect width="36" height="36" fill="#0A0F1E"/>
+                <rect x="9" y="11" width="18" height="14" rx="3" fill="#1a6bff" opacity="0.9"/>
+                <circle cx="14" cy="17" r="2.5" fill="#00E5FF"/>
+                <circle cx="14" cy="17" r="1.2" fill="white"/>
+                <circle cx="22" cy="17" r="2.5" fill="#00E5FF"/>
+                <circle cx="22" cy="17" r="1.2" fill="white"/>
+                <rect x="13" y="21" width="10" height="2" rx="1" fill="#00E5FF" opacity="0.7"/>
+                <rect x="17.5" y="7" width="1.5" height="4" rx="0.75" fill="#4D8BFF"/>
+                <circle cx="18.25" cy="6.5" r="1.5" fill="#00E5FF"/>
+                <rect x="6" y="14" width="3" height="5" rx="1.5" fill="#1a6bff"/>
+                <rect x="27" y="14" width="3" height="5" rx="1.5" fill="#1a6bff"/>
+              </svg>
+            ) : '♟'}
+          </div>
           <div>
-            <div className="gp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : isOnline && oppData ? oppData.username : 'Opponent'}</div>
+            <div className="gp-name" style={isBot?{color:'var(--blue)',fontWeight:800}:{}}>{isBot ? 'ChessWar AI' : isOnline && oppData ? oppData.username : 'Opponent'}</div>
             <div className="gp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>

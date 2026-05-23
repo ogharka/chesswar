@@ -79,7 +79,7 @@ export default function WalletModal({ onClose }) {
         date: new Date().toISOString(),
         status: 'confirmed',
       });
-      await loadBalances();
+      await new Promise(r => setTimeout(r, 2000)); await loadBalances();
       setAmount('');
       try { await fetch('https://ws.chesswar.xyz/deposit', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ address: wallet.address, amount: n }) }); } catch(e) {}
       toast.success(`Deposited ${n} USDC successfully!`);
@@ -122,7 +122,7 @@ export default function WalletModal({ onClose }) {
         date: new Date().toISOString(),
         status: 'confirmed',
       });
-      await loadBalances();
+      await new Promise(r => setTimeout(r, 2000)); await loadBalances();
       setAmount('');
       setWithdrawAddr('');
       toast.success(`Withdrawn ${n} USDC to ${shortAddr(toAddr)}`);

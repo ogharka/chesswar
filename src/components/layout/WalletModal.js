@@ -32,12 +32,16 @@ export default function WalletModal({ onClose }) {
   }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBalances = async () => {
-    const [usdc, eth] = await Promise.all([
-      getUSDCBalance(wallet.address, provider),
-      getETHBalance(wallet.address, provider),
-    ]);
-    setUsdcBal(usdc);
-    setEthBal(eth);
+    try {
+      const { ethers } = await import('ethers');
+      const freshProvider = new ethers.BrowserProvider(window.ethereum);
+      const [usdc, eth] = await Promise.all([
+        getUSDCBalance(wallet.address, freshProvider),
+        getETHBalance(wallet.address, freshProvider),
+      ]);
+      setUsdcBal(usdc);
+      setEthBal(eth);
+    } catch { }
     // Load in-app balance from server
     try {
       const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);

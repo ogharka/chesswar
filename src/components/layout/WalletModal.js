@@ -41,8 +41,7 @@ export default function WalletModal({ onClose }) {
       const stored = localStorage.getItem(`cw_balance_${wallet.address}`) || '0.00';
       setPlatformBal(stored);
     }
-    const stored = '0.00'; // unused fallback
-    setPlatformBal(stored);
+
   };
 
   const updatePlatformBal = (newBal) => {

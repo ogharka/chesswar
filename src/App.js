@@ -31,6 +31,34 @@ export default function App() {
     initBaseApp();
   }, []);
 
+  // Auto-switch to Base mainnet whenever network changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const switchToBase = async () => {
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== '0x2105') {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }],
+          });
+        }
+      } catch (e) {
+        if (e.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }],
+            });
+          } catch {}
+        }
+      }
+    };
+    switchToBase();
+    window.ethereum.on('chainChanged', switchToBase);
+    return () => window.ethereum.removeListener('chainChanged', switchToBase);
+  }, []);
+
   // Base App SDK
   useEffect(() => {
     const initBaseApp = async () => {
@@ -40,6 +68,34 @@ export default function App() {
       } catch {}
     };
     initBaseApp();
+  }, []);
+
+  // Auto-switch to Base mainnet whenever network changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const switchToBase = async () => {
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== '0x2105') {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }],
+          });
+        }
+      } catch (e) {
+        if (e.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }],
+            });
+          } catch {}
+        }
+      }
+    };
+    switchToBase();
+    window.ethereum.on('chainChanged', switchToBase);
+    return () => window.ethereum.removeListener('chainChanged', switchToBase);
   }, []);
 
   useEffect(() => {

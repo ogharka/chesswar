@@ -21,7 +21,13 @@ export default function WalletModal({ onClose }) {
   );
 
   useEffect(() => {
-    if (!wallet?.address || !provider) return;
+    if (!wallet?.address) return;
+    // Load in-app balance immediately
+    fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`)
+      .then(r => r.json())
+      .then(data => setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2)))
+      .catch(() => {});
+    if (!provider) return;
     loadBalances();
   }, [wallet?.address, provider]); // eslint-disable-line react-hooks/exhaustive-deps
 

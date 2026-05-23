@@ -35,13 +35,20 @@ export default function WalletModal({ onClose }) {
     try {
       const { ethers } = await import('ethers');
       const freshProvider = new ethers.BrowserProvider(window.ethereum);
-      const [usdc, eth] = await Promise.all([
-        getUSDCBalance(wallet.address, freshProvider),
-        getETHBalance(wallet.address, freshProvider),
+      // Direct USDC balance check
+      const usdcContract = new ethers.Contract(
+        '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'],
+        freshProvider
+      );
+      const [bal, dec, ethBal] = await Promise.all([
+        usdcContract.balanceOf(wallet.address),
+        usdcContract.decimals(),
+        freshProvider.getBalance(wallet.address),
       ]);
-      setUsdcBal(usdc);
-      setEthBal(eth);
-    } catch { }
+      setUsdcBal(parseFloat(ethers.formatUnits(bal, dec)).toFixed(2));
+      setEthBal(parseFloat(ethers.formatEther(ethBal)).toFixed(4));
+    } catch (e) { console.log('Balance load error:', e.message); }
     // Load in-app balance from server
     try {
       const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);

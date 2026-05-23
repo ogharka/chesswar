@@ -85,13 +85,23 @@ export default function WalletModal({ onClose }) {
   const handleDeposit = async () => {
     const n = parseFloat(amount);
     if (isNaN(n) || n < 0.1) { toast.error('Minimum deposit is 0.10 USDC'); return; }
-    if (parseFloat(usdcBal) < n) { toast.error(`Insufficient balance. You have ${usdcBal} USDC`); return; }
 
     setLoading(true);
     try {
+      // Get fresh balance before depositing
+      const { ethers } = await import('ethers');
+      const freshProvider = new ethers.BrowserProvider(window.ethereum);
+      const usdcContract = new ethers.Contract(
+        '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'],
+        freshProvider
+      );
+      const [bal, dec] = await Promise.all([usdcContract.balanceOf(wallet.address), usdcContract.decimals()]);
+      const freshBal = parseFloat(ethers.formatUnits(bal, dec));
+      setUsdcBal(freshBal.toFixed(2));
+      if (freshBal < n) { toast.error(`Insufficient balance. You have ${freshBal.toFixed(2)} USDC`); setLoading(false); return; }
+
       const receipt = await depositUSDC(n, wallet.signer, provider);
-      const newBal = (parseFloat(platformBal) + n).toFixed(2);
-      updatePlatformBal(newBal);
       addTx({
         type: 'deposit',
         amount: n,

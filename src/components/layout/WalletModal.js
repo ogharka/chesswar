@@ -21,7 +21,8 @@ export default function WalletModal({ onClose }) {
   );
 
   useEffect(() => {
-    if (!wallet?.address) return;
+    if (!wallet?.address) { console.log('No wallet address'); return; }
+    console.log('Loading balance for:', wallet.address);
     // Load in-app balance immediately
     fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`)
       .then(r => r.json())

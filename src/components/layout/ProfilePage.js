@@ -60,7 +60,7 @@ export default function ProfilePage() {
   }, [wallet?.address]); // eslint-disable-line
 
   const handleMint = async (tier) => {
-    const nftAddress = process.env.REACT_APP_NFT_ADDRESS || '0x199c00E8330Af2F7b76D6EC097B750ab1c1Cf0A1';
+    const nftAddress = process.env.REACT_APP_NFT_ADDRESS || '0x893b49999592775b2d85cAB4BF697Da1f4Ee5731';
     if (!window.ethereum) { toast.error('Wallet not connected'); return; }
     setMinting(tier);
     try {

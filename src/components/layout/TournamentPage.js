@@ -51,7 +51,7 @@ const TOURNAMENTS = [
     entry: 5,
     maxPlayers: 8,
     timeControl: '3 min',
-    schedule: { hour: 20, minute: 0, days: 'every', forceOpen: true },
+    schedule: { hour: 20, minute: 0, days: 'every', forceOpen: true, forceMs: 58 * 60 * 1000 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #003BBF 0%, #0052FF 60%, #1A6BFF 100%)',
     accentColor: '#0052FF',
@@ -68,7 +68,7 @@ const TOURNAMENTS = [
     entry: 5,
     maxPlayers: 16,
     timeControl: '5 min',
-    schedule: { hour: 18, minute: 0, days: 5 },
+    schedule: { hour: 18, minute: 0, days: 5, forceOpen: true, forceMs: 52 * 60 * 1000 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #1A0A4F 0%, #3B1FBF 55%, #6B4FFF 100%)',
     accentColor: '#7B61FF',
@@ -85,7 +85,7 @@ const TOURNAMENTS = [
     entry: 5,
     maxPlayers: 32,
     timeControl: '5 min',
-    schedule: { hour: 16, minute: 0, days: 0 },
+    schedule: { hour: 16, minute: 0, days: 0, forceOpen: true, forceMs: 45 * 60 * 1000 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #1A0F00 0%, #7B4F00 50%, #C9A84C 100%)',
     accentColor: '#C9A84C',
@@ -102,7 +102,7 @@ const TOURNAMENTS = [
     entry: 5,
     maxPlayers: 16,
     timeControl: '10 min',
-    schedule: { hour: 14, minute: 0, days: 6 },
+    schedule: { hour: 14, minute: 0, days: 6, forceOpen: true, forceMs: 38 * 60 * 1000 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #003040 0%, #005F8A 50%, #0096C7 100%)',
     accentColor: '#0096C7',
@@ -132,8 +132,9 @@ function getNextOccurrence(schedule) {
 function getTournamentStatus(schedule) {
   const now = new Date();
   if (schedule.forceOpen) {
-    const start = new Date(now.getTime() + 58 * 60 * 1000);
-    return { status: 'open', ms: 58 * 60 * 1000, startDate: start };
+    const ms = schedule.forceMs || 58 * 60 * 1000;
+    const start = new Date(now.getTime() + ms);
+    return { status: 'open', ms, startDate: start };
   }
   const start = getNextOccurrence(schedule);
   const regOpen = new Date(start.getTime() - 2 * 60 * 60 * 1000);
@@ -423,27 +424,31 @@ export default function TournamentPage() {
 
       {/* Rules Card */}
       <div style={{ background:'linear-gradient(160deg,#0A0F1E,#0A1628)', borderRadius:20, padding:'20px 18px', border:'1px solid rgba(255,255,255,0.06)', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
-        <div style={{ fontSize:14, fontWeight:800, color:'#fff', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ fontSize:14, fontWeight:800, color:'#fff', marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ width:28, height:28, borderRadius:8, background:'rgba(255,215,0,0.15)', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,215,0,0.3)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
           How It Works
         </div>
-        {[
-          ['🔑','Registration opens 2 hours before each tournament'],
-          ['⚡','Bracket auto-generated at start — matches assigned instantly'],
-          ['🎮','Play real chess games — winner advances each round'],
-          ['⭐','5× point boost on every tournament game you play'],
-          ['💰','Prizes paid instantly to your in-app USDC balance'],
-          ['↩️','Full refund if fewer than 4 players register'],
-          ['⏱','No-show = auto forfeit — be ready when game starts'],
-          ['🏅','Placement bonus points awarded at tournament end'],
-        ].map(([icon, text], i) => (
-          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:i < 7 ? 10 : 0 }}>
-            <span style={{ fontSize:15, flexShrink:0 }}>{icon}</span>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>{text}</span>
-          </div>
-        ))}
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          {[
+            { num:'01', title:'Register', desc:'Join during the 2-hour registration window. 5 USDC entry fee deducted from your in-app balance.' },
+            { num:'02', title:'Bracket', desc:'At start time, all players are randomly paired. Your match is assigned automatically — no waiting.' },
+            { num:'03', title:'Play', desc:'Play a real chess game against your opponent. Winner advances. Every game gives 5× point boost.' },
+            { num:'04', title:'Win Prizes', desc:'Champion takes 60% of the prize pool. Runner-up gets 25%. 3rd & 4th share the rest.' },
+            { num:'05', title:'Get Paid', desc:'Prizes and bonus points credited instantly after the final game. Full refund if under 4 players join.' },
+          ].map((item, i) => (
+            <div key={i} style={{ display:'flex', gap:14, paddingBottom: i < 4 ? 16 : 0, marginBottom: i < 4 ? 16 : 0, borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+              <div style={{ width:32, height:32, borderRadius:10, background:'rgba(0,82,255,0.2)', border:'1px solid rgba(0,82,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <span style={{ fontSize:11, fontWeight:900, color:'#60A5FA', fontFamily:'monospace' }}>{item.num}</span>
+              </div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:'#fff', marginBottom:3 }}>{item.title}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', lineHeight:1.6 }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
     </div>

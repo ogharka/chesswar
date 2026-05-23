@@ -32,8 +32,16 @@ export default function WalletModal({ onClose }) {
     ]);
     setUsdcBal(usdc);
     setEthBal(eth);
-    // Load in-app balance from localStorage (replace with backend in production)
-    const stored = localStorage.getItem(`cw_balance_${wallet.address}`) || '0.00';
+    // Load in-app balance from server
+    try {
+      const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);
+      const data = await res.json();
+      setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2));
+    } catch {
+      const stored = localStorage.getItem(`cw_balance_${wallet.address}`) || '0.00';
+      setPlatformBal(stored);
+    }
+    const stored = '0.00'; // unused fallback
     setPlatformBal(stored);
   };
 

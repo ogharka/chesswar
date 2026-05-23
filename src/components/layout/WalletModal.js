@@ -22,13 +22,22 @@ export default function WalletModal({ onClose }) {
 
   useEffect(() => {
     if (!wallet?.address) return;
+    // Load all balances when modal opens
+    loadBalances();
     // Load in-app balance from server
     fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`)
       .then(r => r.json())
       .then(data => setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2)))
       .catch(() => setPlatformBal('0.00'));
-    // Load blockchain balances
-    if (provider) loadBalances();
+    // Refresh every 5 seconds
+    const iv = setInterval(() => {
+      loadBalances();
+      fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`)
+        .then(r => r.json())
+        .then(data => setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2)))
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(iv);
   }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBalances = async () => {

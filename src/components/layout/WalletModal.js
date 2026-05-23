@@ -101,8 +101,19 @@ export default function WalletModal({ onClose }) {
     setLoading(true);
     try {
       const receipt = await withdrawUSDC(n, toAddr, wallet.signer);
-      const newBal = (parseFloat(platformBal) - n).toFixed(2);
-      updatePlatformBal(newBal);
+      // Deduct from server balance
+      try {
+        await fetch('https://ws.chesswar.xyz/deposit', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ address: wallet.address, amount: -n })
+        });
+        const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);
+        const data = await res.json();
+        setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2));
+      } catch {
+        const newBal = (parseFloat(platformBal) - n).toFixed(2);
+        updatePlatformBal(newBal);
+      }
       addTx({
         type: 'withdraw',
         amount: n,

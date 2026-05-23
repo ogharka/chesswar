@@ -21,16 +21,15 @@ export default function WalletModal({ onClose }) {
   );
 
   useEffect(() => {
-    if (!wallet?.address) { console.log('No wallet address'); return; }
-    console.log('Loading balance for:', wallet.address);
-    // Load in-app balance immediately
+    if (!wallet?.address) return;
+    // Load in-app balance from server
     fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`)
       .then(r => r.json())
       .then(data => setPlatformBal(parseFloat(data.usdc_balance || 0).toFixed(2)))
-      .catch(() => {});
-    if (!provider) return;
-    loadBalances();
-  }, [wallet?.address, provider]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => setPlatformBal('0.00'));
+    // Load blockchain balances
+    if (provider) loadBalances();
+  }, [wallet?.address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBalances = async () => {
     const [usdc, eth] = await Promise.all([

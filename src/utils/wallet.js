@@ -79,7 +79,7 @@ export async function getETHBalance(address, provider) {
 
 const VAULT_ABI = [
   'function deposit(uint256 amount) external',
-  'function withdraw(uint256 amount) external',
+  'function withdraw(uint256 amount, address to) external',
   'function balances(address) view returns (uint256)',
 ];
 
@@ -121,7 +121,8 @@ export async function withdrawUSDC(amount, toAddress, signer) {
   const usdc = new ethers.Contract(usdcAddr, USDC_ABI, signer);
   const decimals = await usdc.decimals();
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
-  const tx = await vault.withdraw(amountWei);
+  const address = await signer.getAddress();
+  const tx = await vault.withdraw(amountWei, address);
   const receipt = await tx.wait();
   return receipt;
 }

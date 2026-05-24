@@ -223,7 +223,7 @@ export default function GamePage() {
     if ((isOnline || locState.botDiff) && !configured) {
       if (locState.botDiff) setBotDiff(locState.botDiff);
       if (locState.timeControl) {
-        const tc = TIME_OPTS.find(t => t.val === Number(locState.timeControl)) || TIME_OPTS[2];
+        const tc = TIME_OPTS.find(t => t.base === Number(locState.timeControl) * 60) || TIME_OPTS[2];
         setTimeOpt(tc);
         setWTime(tc.base);
         setBTime(tc.base);

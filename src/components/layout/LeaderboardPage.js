@@ -12,7 +12,6 @@ export default function LeaderboardPage() {
       .then(data => setLeaders(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
-  const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

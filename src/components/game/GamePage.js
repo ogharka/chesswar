@@ -662,8 +662,7 @@ export default function GamePage() {
           <button className="gs-item gs-resign" onClick={() => { resign(); setShowControls(false); }}>
             Resign
           </button>
-          <button className="gs-item" onClick={() => { navigate('/'); setShowControls(false); }}>
-            Exit
+
           </button>
           <button className="gs-cancel" onClick={() => setShowControls(false)}>
             Cancel

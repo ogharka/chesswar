@@ -109,7 +109,11 @@ export default function App() {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           if (accounts.length > 0) {
-            const { provider, signer, address } = await connectWallet();
+            // Silent reconnect - no popup
+            const { ethers } = await import('ethers');
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
             setProvider(provider);
             setWallet({ address, signer });
             initProfile(address);

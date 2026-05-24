@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useStore } from './store/useStore';
-import { connectWallet } from './utils/wallet';
+import { connectWallet, isFarcaster } from './utils/wallet';
 import { loginWithWallet, getProfile, syncNFTBoost } from './utils/api';
 import Navbar        from './components/layout/Navbar';
 import ConnectPage   from './components/layout/ConnectPage';
@@ -20,20 +20,57 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [showUsername, setShowUsername] = useState(false);
 
-  // Base App SDK
+  // Initialize Farcaster SDK and auto-connect if inside Farcaster
   useEffect(() => {
-    const initBaseApp = async () => {
+    const init = async () => {
       try {
         const { sdk } = await import('@farcaster/frame-sdk');
         await sdk.actions.ready();
-      } catch {}
-    };
-    initBaseApp();
-  }, []);
 
-  // Auto-switch to Base mainnet whenever network changes
+        // Auto-connect wallet if inside Farcaster
+        if (isFarcaster()) {
+          try {
+            const { provider, signer, address } = await connectWallet();
+            setProvider(provider);
+            setWallet({ address, signer });
+            initProfile(address);
+            try {
+              await loginWithWallet(signer);
+              const user = await getProfile(address);
+              if (user) {
+                updateProfile({
+                  username:    user.username || '',
+                  referralCode: user.referralCode,
+                  gamesPlayed: user.gamesPlayed,
+                  gamesWon:    user.gamesWon,
+                  gamesLost:   user.gamesLost,
+                  gamesDraw:   user.gamesDraw,
+                });
+                if (setPoints)   setPoints(user.points);
+                if (setNftBoost) setNftBoost(user.nftBoost);
+              }
+              await syncNFTBoost().catch(() => {});
+            } catch { /* backend offline */ }
+            // Fetch from ws server
+            try {
+              const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
+              const user = await res.json();
+              if (user?.username && user.username !== 'Anonymous') {
+                updateProfile({ username: user.username });
+                if (user.points) setPoints(user.points);
+              }
+            } catch {}
+          } catch { /* wallet not ready yet, user will click connect */ }
+        }
+      } catch {}
+      setBooting(false);
+    };
+    init();
+  }, []); // eslint-disable-line
+
+  // Auto-switch to Base mainnet for regular browser
   useEffect(() => {
-    if (!window.ethereum) return;
+    if (!window.ethereum || isFarcaster()) return;
     const switchToBase = async () => {
       try {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
@@ -59,46 +96,9 @@ export default function App() {
     return () => window.ethereum.removeListener('chainChanged', switchToBase);
   }, []);
 
-  // Base App SDK
+  // Auto-reconnect for regular browser
   useEffect(() => {
-    const initBaseApp = async () => {
-      try {
-        const { sdk } = await import('@farcaster/frame-sdk');
-        await sdk.actions.ready();
-      } catch {}
-    };
-    initBaseApp();
-  }, []);
-
-  // Auto-switch to Base mainnet whenever network changes
-  useEffect(() => {
-    if (!window.ethereum) return;
-    const switchToBase = async () => {
-      try {
-        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        if (chainId !== '0x2105') {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x2105' }],
-          });
-        }
-      } catch (e) {
-        if (e.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }],
-            });
-          } catch {}
-        }
-      }
-    };
-    switchToBase();
-    window.ethereum.on('chainChanged', switchToBase);
-    return () => window.ethereum.removeListener('chainChanged', switchToBase);
-  }, []);
-
-  useEffect(() => {
+    if (isFarcaster()) return;
     const tryReconnect = async () => {
       if (localStorage.getItem("cw_just_disconnected")) {
         localStorage.removeItem("cw_just_disconnected");
@@ -109,7 +109,6 @@ export default function App() {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           if (accounts.length > 0) {
-            // Silent reconnect - no popup
             const { ethers } = await import('ethers');
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
@@ -133,8 +132,7 @@ export default function App() {
                 if (setNftBoost) setNftBoost(user.nftBoost);
               }
               await syncNFTBoost().catch(() => {});
-            } catch { /* backend offline */ }
-            // Fetch user from server
+            } catch {}
             try {
               const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
               const user = await res.json();
@@ -144,7 +142,7 @@ export default function App() {
               }
             } catch {}
           }
-        } catch { /* silent */ }
+        } catch {}
       }
       setBooting(false);
     };
@@ -153,7 +151,6 @@ export default function App() {
 
   useEffect(() => {
     if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) {
-      // Check server if user exists (returning user)
       fetch(`https://ws.chesswar.xyz/user/${wallet.address}`)
         .then(r => r.json())
         .then(user => {
@@ -161,12 +158,12 @@ export default function App() {
             updateProfile({ username: user.username });
             if (user.points) setPoints(user.points);
           } else {
-            setShowUsername(true); // New user
+            setShowUsername(true);
           }
         })
         .catch(() => setShowUsername(true));
     }
-  }, [wallet, profile.username]);
+  }, [wallet, profile.username]); // eslint-disable-line
 
   if (booting) return (
     <div className="boot-screen">
@@ -180,8 +177,6 @@ export default function App() {
   );
 
   if (!wallet) return <ConnectPage />;
-
-  
 
   return (
     <BrowserRouter>

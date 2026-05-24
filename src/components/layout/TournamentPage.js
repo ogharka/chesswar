@@ -86,7 +86,8 @@ const TOURNAMENTS = [
   },
 ];
 
-function getTournamentStatus(t, serverTimes = {}) {
+function getTournamentStatus(t, serverTimes) {
+  if (serverTimes === null) return { status: 'loading', ms: 0, startDate: new Date() };
   const now = Date.now();
   if (t.scheduleType === 'blitz') {
     const ms = BLITZ_START - now;
@@ -146,8 +147,8 @@ export default function TournamentPage() {
   const navigate = useNavigate();
   const [statuses, setStatuses] = useState({});
   const [loading, setLoading] = useState(null);
-  const [serverTimes, setServerTimes] = useState({});
-  const [serverTimes, setServerTimes] = useState({});
+  const [serverTimes, setServerTimes] = useState(null); // null = loading
+  const [serverTimes, setServerTimes] = useState(null); // null = loading
   useEffect(() => {
     fetch('https://ws.chesswar.xyz/tournament-times')
       .then(r => r.json())
@@ -288,7 +289,7 @@ export default function TournamentPage() {
         const ts = statuses[t.id];
         const joined = joinedTournaments.find(j => j.id === t.id);
         const pool = prizePool(t);
-        const isOpen = ts?.status === 'open';
+        const isOpen = ts?.status === 'open' || ts?.status === 'loading';
         const isLive = ts?.status === 'starting';
         const isUpcoming = ts?.status === 'upcoming';
         const isLoading = loading === t.id;
@@ -374,7 +375,7 @@ export default function TournamentPage() {
               {/* Button */}
               <button onClick={() => join(t)} disabled={!!joined || isLoading}
                 style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined ? 'not-allowed' : 'pointer', background: joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
-                {isLoading ? 'Processing...' : joined ? `Registered · ${registeredCount}/${t.maxPlayers} players` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Opens for Registration Soon' : `Register · ${t.entry} USDC`}
+                {ts?.status === 'loading' ? 'Loading...' : isLoading ? 'Processing...' : joined ? `Registered · ${registeredCount}/${t.maxPlayers} players` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Opens for Registration Soon' : `Register · ${t.entry} USDC`}
               </button>
 
               {isOpen && !joined && <div style={{ textAlign:'center', fontSize:10, color:'#94A3B8', marginTop:6 }}>Full refund if fewer than 4 players register</div>}

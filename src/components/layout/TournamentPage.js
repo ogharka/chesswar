@@ -147,13 +147,10 @@ function getNext4HourSlot(offsetHours) {
 
 function getTournamentStatus(schedule) {
   const now = new Date();
-  const start = getNext4HourSlot(schedule.offset || 0);
-  const regOpen = new Date(start.getTime() - 60 * 60 * 1000); // opens 1hr before
-  const msUntilStart = start - now;
-  const msUntilReg = regOpen - now;
-  if (msUntilStart < 0) return { status: 'live', ms: 0, startDate: start };
-  if (msUntilReg <= 0) return { status: 'open', ms: msUntilStart, startDate: start };
-  return { status: 'upcoming', ms: msUntilReg, startMs: msUntilStart, startDate: start };
+  // Always open for testing - starts in 30 min + offset
+  const offsetMin = (schedule.offset || 0) * 7;
+  const start = new Date(now.getTime() + (30 + offsetMin) * 60 * 1000);
+  return { status: 'open', ms: (30 + offsetMin) * 60 * 1000, startDate: start };
 }
 
 function CountdownDisplay({ ms, label }) {
@@ -412,10 +409,10 @@ export default function TournamentPage() {
                 }}
               >
                 {isLoading ? '⏳ Processing...' :
-                 joined ? '✓ Registered — Await Tournament Start' :
-                 isLive ? '🔴 Tournament In Progress' :
-                 isUpcoming ? '🔒 Registration Not Open Yet' :
-                 `🎮 Register Now · ${t.entry} USDC Entry`}
+                 joined ? '✓ Registered' :
+                 isLive ? 'Tournament In Progress' :
+                 isUpcoming ? 'Registration Not Open Yet' :
+                 `Register Now · ${t.entry} USDC`}
               </button>
 
               {joined && (

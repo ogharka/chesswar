@@ -248,8 +248,8 @@ export default function TournamentPage() {
         <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:4 }}>War Tournaments</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.55)', marginBottom:20 }}>Compete · Win USDC · Earn 5× Points</div>
         <div style={{ display:'flex', background:'rgba(255,255,255,0.04)', borderRadius:16, border:'1px solid rgba(255,255,255,0.08)', overflow:'hidden' }}>
-          {[{ val:`$${totalPrize}`, label:'Total Prizes', color:'#60A5FA' }, { val:'3', label:'Tournaments', color:'#fff' }, { val:'5×', label:'Pts Boost', color:'#FFD700' }].map((s, i) => (
-            <div key={i} style={{ flex:1, textAlign:'center', borderRight: i<2 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding:'10px 6px' }}>
+          {[{ val:`$${totalPrize}`, label:'Total Prizes', color:'#60A5FA' }, { val:'3', label:'Tournaments', color:'#fff' }, { val:'0.1-50', label:'Entry Fee', color:'#fff' }, { val:'5×', label:'Pts Boost', color:'#FFD700' }].map((s, i) => (
+            <div key={i} style={{ flex:1, textAlign:'center', borderRight: i<3 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding:'10px 6px' }}>
               <div style={{ fontSize:18, fontWeight:900, color:s.color }}>{s.val}</div>
               <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
             </div>

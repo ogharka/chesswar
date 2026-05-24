@@ -339,16 +339,18 @@ export default function GamePage() {
       if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return;
     }
     const chess = chessRef.current, piece = chess.get(sq);
-    if (!selected) {
-      if (piece && piece.color === chess.turn()) {
-        setSelected(sq);
-        const legal = chess.moves({ square: sq, verbose: true });
-        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
-        legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
-        setHilights(h);
-      }
+
+    // Always allow selecting own piece - even if another piece already selected
+    if (piece && piece.color === chess.turn()) {
+      setSelected(sq);
+      const legal = chess.moves({ square: sq, verbose: true });
+      const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+      legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+      setHilights(h);
       return;
     }
+
+    if (!selected) return;
     if (isPromo(selected, sq)) {
       const legal = chess.moves({ square: selected, verbose: true }).map((m) => m.to);
       if (legal.includes(sq)) { setPromo({ from: selected, to: sq }); setSelected(null); setHilights({}); return; }

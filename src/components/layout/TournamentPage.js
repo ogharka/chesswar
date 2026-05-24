@@ -149,6 +149,22 @@ export default function TournamentPage() {
   const [statuses, setStatuses] = useState({});
   const [loading, setLoading] = useState(null);
   const [serverTimes, setServerTimes] = useState({});
+  const [serverTimes, setServerTimes] = useState({});
+  useEffect(() => {
+    fetch('https://ws.chesswar.xyz/tournament-times')
+      .then(r => r.json())
+      .then(data => setServerTimes(data))
+      .catch(() => {});
+    // Refresh every 30 seconds
+    const iv = setInterval(() => {
+      fetch('https://ws.chesswar.xyz/tournament-times')
+        .then(r => r.json())
+        .then(data => setServerTimes(data))
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(iv);
+  }, []);
+
   useEffect(() => {
     fetch('https://ws.chesswar.xyz/tournament-times')
       .then(r => r.json())

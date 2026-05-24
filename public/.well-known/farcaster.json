@@ -16,7 +16,7 @@
     "description": "Play chess, bet USDC, earn points and NFTs on Base blockchain",
     "primaryCategory": "games",
     "buttonTitle": "Play Now",
-    "imageUrl": "https://www.chesswar.xyz/logo192.png",
+   "imageUrl": "https://www.chesswar.xyz/og-image.png",
     "tags": ["chess", "gaming", "base", "bet"]
   }
 }

@@ -218,29 +218,19 @@ export default function GamePage() {
   }, [endGame, sfx, timeOpt.inc, isOnline, gameId]);
 
 
-  // Auto-start online and bot games from dashboard
+  // Auto-start online games
   useEffect(() => {
-    if ((isOnline || locState.botDiff) && !configured) {
-      if (locState.botDiff) setBotDiff(locState.botDiff);
-      if (locState.timeControl) {
-        const tc = TIME_OPTS.find(t => t.val === locState.timeControl) || TIME_OPTS[2];
-        setTimeOpt(tc);
-      }
+    if (isOnline && !configured) {
       setStarted(true);
       setConfigured(true);
     }
-  }, [isOnline, locState.botDiff]); // eslint-disable-line
+  }, [isOnline]); // eslint-disable-line
 
   // Socket handlers for online games
   useEffect(() => {
     if (!isOnline || !gameId) return;
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
-    
-    // Rejoin game room on reconnect
-    socket.on('connect', () => {
-      socket.emit('join_game', { gameId });
-    });
 
     // Idle timeout - 50s at start, 2min during game
     let idleTimer = setTimeout(() => {
@@ -344,18 +334,16 @@ export default function GamePage() {
       if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return;
     }
     const chess = chessRef.current, piece = chess.get(sq);
-
-    // Always allow selecting own piece - even if another piece already selected
-    if (piece && piece.color === chess.turn()) {
-      setSelected(sq);
-      const legal = chess.moves({ square: sq, verbose: true });
-      const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
-      legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
-      setHilights(h);
+    if (!selected) {
+      if (piece && piece.color === chess.turn()) {
+        setSelected(sq);
+        const legal = chess.moves({ square: sq, verbose: true });
+        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+        legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+        setHilights(h);
+      }
       return;
     }
-
-    if (!selected) return;
     if (isPromo(selected, sq)) {
       const legal = chess.moves({ square: selected, verbose: true }).map((m) => m.to);
       if (legal.includes(sq)) { setPromo({ from: selected, to: sq }); setSelected(null); setHilights({}); return; }

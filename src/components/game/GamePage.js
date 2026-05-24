@@ -658,31 +658,12 @@ export default function GamePage() {
               Offer Draw
             </button>
           )}
-          {moves.length <= 1 && (
-            <button className="gs-item gs-abort" onClick={() => { abort(); setShowControls(false); }}>
-              Abort Game
-            </button>
-          )}
+
           <button className="gs-item gs-resign" onClick={() => { resign(); setShowControls(false); }}>
             Resign
           </button>
-          <button className="gs-item gs-resign" onClick={() => {
-            if (started && !over) {
-              if (!window.confirm('Leaving counts as resign. You will lose' + (isBet ? ' and forfeit your bet.' : '.'))) return;
-              if (isOnline && gameId) {
-                const socket = connectSocket();
-                socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
-              }
-              if (isOnline && gameId) {
-                const socket = connectSocket();
-                socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
-              }
-              endGame('b', 'resignation');
-              setTimeout(() => navigate('/'), 1500);
-            } else { navigate('/'); }
-            setShowControls(false);
-          }}>
-            Leave Game
+          <button className="gs-item" onClick={() => { navigate('/'); setShowControls(false); }}>
+            Exit
           </button>
           <button className="gs-cancel" onClick={() => setShowControls(false)}>
             Cancel

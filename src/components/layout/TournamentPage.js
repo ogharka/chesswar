@@ -346,9 +346,9 @@ export default function TournamentPage() {
               </div>
 
               {/* Button */}
-              <button onClick={() => join(t)} disabled={!!joined || isLive || isLoading}
-                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined||isLive ? 'not-allowed' : 'pointer', background: joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
-                {isLoading ? '⏳ Processing...' : joined ? `✓ Registered (${registeredCount}/${t.maxPlayers} players)` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Registration Not Open Yet' : `Register Now · ${t.entry} USDC`}
+              <button onClick={() => join(t)} disabled={!!joined || isLoading}
+                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined ? 'not-allowed' : 'pointer', background: joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
+                {isLoading ? 'Processing...' : joined ? `Registered · ${registeredCount}/${t.maxPlayers} players` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Opens for Registration Soon' : `Register · ${t.entry} USDC`}
               </button>
 
               {isOpen && !joined && <div style={{ textAlign:'center', fontSize:10, color:'#94A3B8', marginTop:6 }}>Full refund if fewer than 4 players register</div>}

@@ -151,10 +151,22 @@ export default function App() {
 
   useEffect(() => {
     if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) {
-      // Wait briefly for server fetch to complete before showing setup
-      setTimeout(() => {
-        if (!useStore.getState().profile.username) setShowUsername(true);
-      }, 2000);
+      // Check server if user exists (returning user)
+      fetch(`https://ws.chesswar.xyz/leaderboard`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const user = data.find(u => u.address === wallet.address.toLowerCase());
+            if (user?.username && user.username !== 'Anonymous') {
+              updateProfile({ username: user.username });
+            } else {
+              setShowUsername(true); // New user
+            }
+          } else {
+            setShowUsername(true);
+          }
+        })
+        .catch(() => setShowUsername(true));
     }
   }, [wallet, profile.username]);
 

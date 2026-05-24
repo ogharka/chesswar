@@ -311,7 +311,7 @@ export default function TournamentPage() {
                 {[
                   { label:'Time', val:t.timeControl },
                   { label:'Max', val:t.maxPlayers },
-                  { label:'Players', val:`${registeredCount}/${t.maxPlayers}` },
+                  { label:'Registered', val:`${registeredCount}/${t.maxPlayers}` },
                   { label:'Prize', val:`$${pool}` },
                 ].map((s, i) => (
                   <div key={i} style={{ background:'#F8FAFC', borderRadius:10, padding:'8px 4px', textAlign:'center', border:'1px solid #EEF2F6' }}>

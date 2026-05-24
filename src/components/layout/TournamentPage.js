@@ -29,6 +29,9 @@ const Icons = {
   ),
 };
 
+// Blitz start time fixed when page loads
+const BLITZ_START = Date.now() + 2 * 60 * 1000;
+
 const TOURNAMENTS = [
   {
     id: 'blitz-4hr',
@@ -83,27 +86,30 @@ const TOURNAMENTS = [
   },
 ];
 
-function getTournamentStatus(t, serverTimes = {}) {
+function getTournamentStatus(t) {
   const now = Date.now();
   if (t.scheduleType === 'blitz') {
-    const startTs = serverTimes['blitz-4hr'] || (Date.now() + 2 * 60 * 1000);
-    const ms = startTs - now;
-    if (ms <= 0) return { status: 'starting', ms: 0, startDate: new Date(startTs) };
-    return { status: 'open', ms, startDate: new Date(startTs) };
+    const ms = BLITZ_START - now;
+    if (ms <= 0) return { status: 'starting', ms: 0, startDate: new Date(BLITZ_START) };
+    return { status: 'open', ms, startDate: new Date(BLITZ_START) };
   }
   if (t.scheduleType === 'daily') {
-    const startTs = serverTimes['daily-champ'] || (() => { const n = new Date(); n.setUTCHours(20,0,0,0); if(n.getTime()<=now) n.setUTCDate(n.getUTCDate()+1); return n.getTime(); })();
-    const next = new Date(startTs);
-    const ms = startTs - now;
+    const next = new Date();
+    next.setUTCHours(20, 0, 0, 0);
+    if (next.getTime() <= now) next.setUTCDate(next.getUTCDate() + 1);
+    const ms = next.getTime() - now;
     const regOpen = new Date(next.getTime() - 2 * 60 * 60 * 1000);
     if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
     if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
     return { status: 'upcoming', ms: regOpen.getTime() - now, startDate: next };
   }
   if (t.scheduleType === 'weekly') {
-    const startTs = serverTimes['weekly-grand'] || (() => { const n = new Date(); const d=(5-n.getUTCDay()+7)%7||7; n.setUTCDate(n.getUTCDate()+d); n.setUTCHours(18,0,0,0); return n.getTime(); })();
-    const next = new Date(startTs);
-    const ms = startTs - now;
+    const next = new Date();
+    const day = next.getUTCDay();
+    const daysUntilFri = (5 - day + 7) % 7 || 7;
+    next.setUTCDate(next.getUTCDate() + daysUntilFri);
+    next.setUTCHours(18, 0, 0, 0);
+    const ms = next.getTime() - now;
     const regOpen = new Date(next.getTime() - 24 * 60 * 60 * 1000);
     if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
     if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
@@ -145,23 +151,14 @@ export default function TournamentPage() {
   const { joinedTournaments, joinTournament, wallet, profile } = useStore();
   const navigate = useNavigate();
   const [statuses, setStatuses] = useState({});
-  const [serverTimes, setServerTimes] = useState({});
   const [loading, setLoading] = useState(null);
   const [playerCounts, setPlayerCounts] = useState({ 'blitz-4hr': 0, 'daily-champ': 0, 'weekly-grand': 0 });
-
-  useEffect(() => {
-    // Fetch tournament times from server (same for all users)
-    fetch('https://ws.chesswar.xyz/tournament-times')
-      .then(r => r.json())
-      .then(data => setServerTimes(data))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     const update = () => {
       const s = {};
       TOURNAMENTS.forEach(t => {
-        const ts = getTournamentStatus(t, serverTimes);
+        const ts = getTournamentStatus(t);
         s[t.id] = ts;
         if (ts.status === 'starting' && joinedTournaments.find(j => j.id === t.id) && wallet?.address) {
           fetch('https://ws.chesswar.xyz/tournament/start', {
@@ -251,8 +248,8 @@ export default function TournamentPage() {
         <div style={{ fontSize:24, fontWeight:900, color:'#fff', marginBottom:4 }}>War Tournaments</div>
         <div style={{ fontSize:13, color:'rgba(255,255,255,0.55)', marginBottom:20 }}>Compete · Win USDC · Earn 5× Points</div>
         <div style={{ display:'flex', background:'rgba(255,255,255,0.04)', borderRadius:16, border:'1px solid rgba(255,255,255,0.08)', overflow:'hidden' }}>
-          {[{ val:`$${totalPrize}`, label:'Total Prizes', color:'#60A5FA' }, { val:'3', label:'Tournaments', color:'#fff' }, { val:'0.1-50', label:'Entry Fee', color:'#fff' }, { val:'5×', label:'Pts Boost', color:'#FFD700' }].map((s, i) => (
-            <div key={i} style={{ flex:1, textAlign:'center', borderRight: i<3 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding:'10px 6px' }}>
+          {[{ val:`$${totalPrize}`, label:'Total Prizes', color:'#60A5FA' }, { val:'3', label:'Tournaments', color:'#fff' }, { val:'5×', label:'Pts Boost', color:'#FFD700' }].map((s, i) => (
+            <div key={i} style={{ flex:1, textAlign:'center', borderRight: i<2 ? '1px solid rgba(255,255,255,0.07)' : 'none', padding:'10px 6px' }}>
               <div style={{ fontSize:18, fontWeight:900, color:s.color }}>{s.val}</div>
               <div style={{ fontSize:9, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:0.5, marginTop:2 }}>{s.label}</div>
             </div>
@@ -305,7 +302,7 @@ export default function TournamentPage() {
               {ts?.startDate && (
                 <div style={{ background:'linear-gradient(135deg,#EEF2FF,#F5F3FF)', borderRadius:10, padding:'8px 12px', marginBottom:12, display:'flex', alignItems:'center', gap:8, border:`1px solid ${t.accentColor}20` }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={t.accentColor} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span style={{ fontSize:11, color:t.accentColor, fontWeight:700 }}>{isOpen ? '🟢 Starts' : '📅 Next'}: {formatDate(ts.startDate)}</span>
+                  <span style={{ fontSize:11, color:t.accentColor, fontWeight:700 }}>{isOpen ? 'Starts' : 'Next'}: {formatDate(ts.startDate)}</span>
                 </div>
               )}
 
@@ -326,7 +323,7 @@ export default function TournamentPage() {
 
               {/* Prize breakdown */}
               <div style={{ background:'linear-gradient(135deg,#FFFBEB,#FEF3C7)', borderRadius:14, padding:'10px 12px', marginBottom:12, border:'1px solid #FDE68A' }}>
-                <div style={{ fontSize:10, fontWeight:800, color:'#92400E', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>💰 Prize Pool · ${pool}</div>
+                <div style={{ fontSize:10, fontWeight:800, color:'#92400E', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>Prize Pool · $${pool}</div>
                 <div style={{ display:'flex', gap:6 }}>
                   {[{place:'🥇 1st',pct:t.prizes[0],color:'#D97706'},{place:'🥈 2nd',pct:t.prizes[1],color:'#6B7280'},{place:'🥉 3rd',pct:t.prizes[2],color:'#92400E'}].map((p,i) => (
                     <div key={i} style={{ flex:1, background:'rgba(255,255,255,0.7)', borderRadius:8, padding:'6px 4px', textAlign:'center' }}>
@@ -349,27 +346,9 @@ export default function TournamentPage() {
               </div>
 
               {/* Button */}
-              <button onClick={() => {
-                if (joined && isLive) {
-                  // Enter tournament lobby
-                  const socket = connectSocket();
-                  socket.emit('tournament_join', {
-                    tournamentId: t.id,
-                    address: wallet?.address || '',
-                    username: profile?.username || 'Anonymous'
-                  });
-                  toast.success('Entering tournament...');
-                  return;
-                }
-                join(t);
-              }} disabled={isLoading || (isLive && !joined)}
-                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined||isLive ? 'not-allowed' : 'pointer', background: joined && isLive ? `linear-gradient(135deg,#059669,#047857)` : joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined && isLive ? '#fff' : joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined && isLive ? '0 6px 20px rgba(5,150,105,0.4)' : joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
-                {isLoading ? '⏳ Processing...' : 
-                 joined && isLive ? '🎮 Enter Tournament Now!' :
-                 joined ? `✓ Registered (${registeredCount}/${t.maxPlayers} players)` : 
-                 isLive ? 'Tournament In Progress' : 
-                 isUpcoming ? 'Registration Not Open Yet' : 
-                 `Register Now · ${t.entry} USDC`}
+              <button onClick={() => join(t)} disabled={!!joined || isLive || isLoading}
+                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined||isLive ? 'not-allowed' : 'pointer', background: joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
+                {isLoading ? '⏳ Processing...' : joined ? `✓ Registered (${registeredCount}/${t.maxPlayers} players)` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Registration Not Open Yet' : `Register Now · ${t.entry} USDC`}
               </button>
 
               {isOpen && !joined && <div style={{ textAlign:'center', fontSize:10, color:'#94A3B8', marginTop:6 }}>Full refund if fewer than 4 players register</div>}

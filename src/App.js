@@ -134,15 +134,13 @@ export default function App() {
               }
               await syncNFTBoost().catch(() => {});
             } catch { /* backend offline */ }
-            // Fallback: fetch username from our WebSocket server
+            // Fetch user from server
             try {
-              const res = await fetch(`https://ws.chesswar.xyz/leaderboard`);
-              const data = await res.json();
-              if (Array.isArray(data)) {
-                const user = data.find(u => u.address === address.toLowerCase());
-                if (user?.username && user.username !== 'Anonymous') {
-                  updateProfile({ username: user.username });
-                }
+              const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
+              const user = await res.json();
+              if (user?.username && user.username !== 'Anonymous') {
+                updateProfile({ username: user.username });
+                if (user.points) setPoints(user.points);
               }
             } catch {}
           }
@@ -156,18 +154,14 @@ export default function App() {
   useEffect(() => {
     if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) {
       // Check server if user exists (returning user)
-      fetch(`https://ws.chesswar.xyz/leaderboard`)
+      fetch(`https://ws.chesswar.xyz/user/${wallet.address}`)
         .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            const user = data.find(u => u.address === wallet.address.toLowerCase());
-            if (user?.username && user.username !== 'Anonymous') {
-              updateProfile({ username: user.username });
-            } else {
-              setShowUsername(true); // New user
-            }
+        .then(user => {
+          if (user?.username && user.username !== 'Anonymous') {
+            updateProfile({ username: user.username });
+            if (user.points) setPoints(user.points);
           } else {
-            setShowUsername(true);
+            setShowUsername(true); // New user
           }
         })
         .catch(() => setShowUsername(true));

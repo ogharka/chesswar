@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
+import { connectSocket } from '../../utils/socket';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Premium SVG Icons
@@ -196,20 +198,32 @@ function formatDate(date) {
 }
 
 export default function TournamentPage() {
-  const { joinedTournaments, joinTournament, wallet } = useStore();
+  const { joinedTournaments, joinTournament, wallet, profile } = useStore();
+  const navigate = useNavigate();
+  const [playerCounts, setPlayerCounts] = React.useState({});
   const [statuses, setStatuses] = useState({});
   const [loading, setLoading] = useState(null);
 
   useEffect(() => {
     const update = () => {
       const s = {};
-      TOURNAMENTS.forEach(t => { s[t.id] = getTournamentStatus(t.schedule); });
+      TOURNAMENTS.forEach(t => {
+        const ts = getTournamentStatus(t.schedule);
+        s[t.id] = ts;
+        // Auto-start when timer hits 0 and player is registered
+        if (ts.status === 'starting' && joinedTournaments.find(j => j.id === t.id) && wallet?.address) {
+          fetch(`https://ws.chesswar.xyz/tournament/start`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ tournamentId: t.id })
+          }).catch(() => {});
+        }
+      });
       setStatuses(s);
     };
     update();
     const iv = setInterval(update, 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [joinedTournaments, wallet]);
 
   const join = async (t) => {
     const ts = statuses[t.id];
@@ -231,6 +245,23 @@ export default function TournamentPage() {
       });
       joinTournament(t.id);
       toast.success(`Registered for ${t.name}! ${t.entry} USDC deducted.`);
+      
+      // Connect to tournament room
+      const socket = connectSocket();
+      socket.emit('tournament_join', {
+        tournamentId: t.id,
+        address: wallet.address,
+        username: profile.username || 'Anonymous'
+      });
+      socket.on('tournament_update', ({ players }) => {
+        setPlayerCounts(prev => ({ ...prev, [t.id]: players }));
+      });
+      socket.on('game_found', ({ gameId, color, opponent, tournament }) => {
+        if (tournament) {
+          toast.success('Tournament match found! Starting game...');
+          navigate('/play/pvp', { state: { gameId, color, opponent, online: true, tournament: true, timeControl: 5 } });
+        }
+      });
     } catch { toast.error('Failed to join. Try again.'); }
     setLoading(null);
   };

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { connectSocket, disconnectSocket } from '../../utils/socket';
 import toast from 'react-hot-toast';
 
 const TIME_OPTS = [
@@ -20,58 +19,68 @@ export default function Dashboard() {
   const { points, nftBoost, profile, gameHistory, wallet } = useStore();
 
   const [selTime,    setSelTime]    = useState(5);
-  const [mode,       setMode]       = useState('bot'); // bot | bet | pvp
+  const [mode,       setMode]       = useState('bot'); // bot | bet | pvp | pvp-free
   const [betAmt,     setBetAmt]     = useState('0.10');
   const [searching,  setSearching]  = useState(false);
 
   const winRate = profile.gamesPlayed
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
+    if (mode === 'bot') {
+      navigate('/play/bot', { state: { timeControl: selTime } });
+      return;
+    }
+
     if (mode === 'pvp-friend') {
       const link = window.location.origin + '?invite=' + Math.random().toString(36).slice(2,8).toUpperCase();
       navigator.clipboard.writeText(link);
-      toast.success('Invite link copied! Share with your friend');
+      toast.success('Invite link copied! Share with your friend.');
       return;
     }
-    if (mode === 'pvp-match') {
-      setSearching(true);
-      const socket = connectSocket();
-      socket.off('game_found');
-      socket.emit('join_queue', {
-        betAmount: 'free',
-        username: profile.username || 'Anonymous',
-        address: wallet?.address || ''
-      });
-      socket.on('game_found', ({ gameId, color, opponent }) => {
-        setSearching(false);
-        toast.success('Opponent found! Starting game...');
-        navigate('/play/pvp', { state: { timeControl: selTime, gameId, color, opponent, online: true } });
-      });
-      return;
-    }
+
     if (mode === 'bet') {
+      // Check in-app balance first
+      if (!wallet?.address) { toast.error('Connect wallet first'); return; }
+      try {
+        const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);
+        const bal = await res.json();
+        if (parseFloat(bal.usdc_balance) < parseFloat(betAmt)) {
+          toast.error(`Need ${betAmt} USDC in-app balance. Deposit first.`);
+          return;
+        }
+      } catch { toast.error('Balance check failed'); return; }
+    }
+
+    // Start matchmaking for online modes
+    if (mode === 'pvp-free' || mode === 'bet') {
       setSearching(true);
+      const { connectSocket } = await import('../../utils/socket');
       const socket = connectSocket();
       socket.off('game_found');
       socket.emit('join_queue', {
-        betAmount: betAmt,
+        betAmount: mode === 'bet' ? betAmt : 'free',
         username: profile.username || 'Anonymous',
         address: wallet?.address || ''
       });
       socket.on('game_found', ({ gameId, color, opponent, betAmount: bAmt }) => {
         setSearching(false);
         toast.success('Opponent found! Starting game...');
-        navigate('/play/bet', { state: { timeControl: selTime, betAmount: bAmt, gameId, color, opponent, online: true } });
+        navigate(mode === 'bet' ? '/play/bet' : '/play/pvp', {
+          state: { timeControl: selTime, betAmount: bAmt, gameId, color, opponent, online: true }
+        });
       });
       return;
     }
-    navigate('/play/' + mode, { state: { timeControl: selTime, betAmount: betAmt } });
+
+    navigate(`/play/${mode}`, { state: { timeControl: selTime, betAmount: betAmt } });
   };
 
   const cancelSearch = () => {
-    const socket = connectSocket();
-    socket.emit('leave_queue');
+    import('../../utils/socket').then(({ connectSocket }) => {
+      const socket = connectSocket();
+      socket.emit('leave_queue');
+    });
     setSearching(false);
     toast('Search cancelled');
   };
@@ -102,7 +111,24 @@ export default function Dashboard() {
         <div className="section-title">Mode</div>
         <div className="mode-grid">
           <div
-            className={`mode-card ${mode === 'bot' ? 'active' : ''}`}
+            className={`mode-card ${mode === 'pvp-free' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-free')}
+            style={mode === 'pvp-free' ? {borderColor:'var(--purple)',background:'linear-gradient(135deg,#fff 60%,#F5F3FF)'} : {}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-free'?'var(--purple)':'var(--t2)'} strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="mc-title">Play Online</div>
+            <div className="mc-sub">Free PvP · coming soon</div>
+            <span className="mc-tag" style={{background:'#F5F3FF',color:'var(--purple)'}}>Free</span>
+          </div>
+          <div
+            className={`mode-card bot ${mode === 'bot' ? 'active' : ''}`}
             onClick={() => setMode('bot')}
             style={mode === 'bot' ? { borderColor: 'var(--green)', background: 'linear-gradient(135deg,#fff 60%,#E6F9F1)' } : {}}
           >
@@ -114,30 +140,12 @@ export default function Dashboard() {
                 <circle cx="15" cy="13" r="1" fill={mode==='bot'?'var(--green)':'var(--t2)'}/>
               </svg>
             </div>
-            <div className="mc-title">vs Bot</div>
-            <div className="mc-sub">Play against AI bot</div>
-            <span className="mc-tag" style={{background:'#E6F9F1',color:'var(--green)'}}>Free</span>
+            <div className="mc-title">vs Computer</div>
+            <div className="mc-sub">Practice & improve</div>
+            <span className="mc-tag green">Free</span>
           </div>
-
           <div
-            className={`mode-card ${mode === 'pvp-match' ? 'active' : ''}`}
-            onClick={() => setMode('pvp-match')}
-            style={mode === 'pvp-match' ? { borderColor: '#8B5CF6', background: 'linear-gradient(135deg,#fff 60%,#F5F3FF)' } : {}}
-          >
-            <div className="mc-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-match'?'#8B5CF6':'var(--t2)'} strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div className="mc-title">Play Online</div>
-            <div className="mc-sub">Free · match with players</div>
-            <span className="mc-tag" style={{background:'#F5F3FF',color:'#8B5CF6'}}>Free</span>
-          </div>
-
-          <div
-            className={`mode-card ${mode === 'bet' ? 'active' : ''}`}
+            className={`mode-card bet ${mode === 'bet' ? 'active' : ''}`}
             onClick={() => setMode('bet')}
             style={mode === 'bet' ? { borderColor: 'var(--blue)', background: 'linear-gradient(135deg,#fff 60%,var(--blue-light))' } : {}}
           >
@@ -149,23 +157,40 @@ export default function Dashboard() {
             </div>
             <div className="mc-title">Bet Battle</div>
             <div className="mc-sub">Wager USDC, win more</div>
-            <span className="mc-tag" style={{background:'var(--blue-light)',color:'var(--blue)'}}>5× Points</span>
+            <span className="mc-tag fire">5× Points</span>
+          </div>
+
+          <div
+            className={`mode-card ${mode === 'pvp-match' ? 'active' : ''}`}
+            onClick={() => setMode('pvp-match')}
+            style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
+          >
+            <div className="mc-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="mc-title" style={{color:'var(--t3)'}}>Play Online</div>
+            <div className="mc-sub" style={{color:'var(--t3)'}}>Match with players</div>
+            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
           </div>
 
           <div
             className={`mode-card ${mode === 'pvp-friend' ? 'active' : ''}`}
             onClick={() => setMode('pvp-friend')}
-            style={mode === 'pvp-friend' ? { borderColor: 'var(--gold)', background: 'linear-gradient(135deg,#fff 60%,#FEF3C7)' } : {}}
+            style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
           >
             <div className="mc-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-friend'?'var(--gold)':'var(--t2)'} strokeWidth="2">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
             </div>
-            <div className="mc-title">Play with Friend</div>
-            <div className="mc-sub">Share link · play together</div>
-            <span className="mc-tag" style={{background:'#FEF3C7',color:'var(--gold)'}}>Invite</span>
+            <div className="mc-title" style={{color:'var(--t3)'}}>Play with Friend</div>
+            <div className="mc-sub" style={{color:'var(--t3)'}}>Share invite link</div>
+            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
           </div>
         </div>
       </div>
@@ -218,16 +243,15 @@ export default function Dashboard() {
       <button
         className={`find-btn ${searching ? 'searching' : ''}`}
         onClick={handlePlay}
-        disabled={false}
+        disabled={searching}
       >
         {searching ? (
-          <div style={{display:'flex',alignItems:'center',gap:12,width:'100%',justifyContent:'center'}}>
+          <>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:'spin 1s linear infinite'}}>
               <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
             </svg>
-            <span>Finding opponent...</span>
-            <button onClick={(e)=>{e.stopPropagation();cancelSearch();}} style={{background:'rgba(255,255,255,0.3)',border:'none',borderRadius:8,padding:'4px 12px',color:'#fff',fontWeight:700,fontSize:13,cursor:'pointer'}}>Cancel</button>
-          </div>
+            Finding opponent...
+          </>
         ) : (
           <>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

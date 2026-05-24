@@ -151,7 +151,6 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
-  const [drawReceived, setDrawReceived] = useState(false);
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -164,7 +163,7 @@ export default function GamePage() {
     clearInterval(timerRef.current);
     const won = winner === 'w', draw = winner === 'd';
     // Resign/Leave = 0 pts for loser, draw = 5, loss by checkmate/timeout = 10, win = 20
-    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? -20 : -10;
+    const base = draw ? 5 : won ? 20 : reason === 'resignation' ? 0 : 10;
     const earned = base > 0 ? addPoints(base, `${mode} · ${reason}`, isBet) : 0;
     updateProfile({
       gamesPlayed: profile.gamesPlayed + 1,
@@ -172,33 +171,8 @@ export default function GamePage() {
       gamesLost:   (!won && !draw) ? profile.gamesLost + 1 : profile.gamesLost,
       gamesDraw:   draw ? profile.gamesDraw + 1 : profile.gamesDraw,
     });
-    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: isOnline && oppData ? oppData.username : 'Opponent', pointsEarned: earned });
+    addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
-
-    // Oracle payout for bet games
-    if (isBet && isOnline && won && gameId && window.ethereum) {
-      setTimeout(async () => {
-        try {
-          const { ethers } = await import('ethers');
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-          const myAddr = await signer.getAddress();
-          const res = await fetch('https://ws.chesswar.xyz/oracle/sign', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gameId, winnerAddress: myAddr })
-          });
-          const { sig } = await res.json();
-          const betContract = new ethers.Contract(
-            process.env.REACT_APP_BET_ADDRESS,
-            ['function resolveGame(bytes32 gameId, address winner, bytes calldata sig) external'],
-            signer
-          );
-          const tx = await betContract.resolveGame(ethers.encodeBytes32String(gameId), myAddr, sig);
-          await tx.wait();
-          toast.success('Prize claimed! USDC added to your vault.');
-        } catch (e) { console.log('Oracle payout:', e.message); }
-      }, 2000);
-    }
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
   }, [addPoints, addGameResult, betAmt, isBet, mode, profile, sfx, updateProfile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -295,15 +269,17 @@ export default function GamePage() {
       }
     });
     socket.on('game_ended', ({ winner, reason }) => {
-      // Always process disconnect - don't ignore even if game ended locally
-      if (overRef.current && reason !== 'disconnect') return;
+      if (overRef.current) return; // already ended locally
       const won  = (winner === 'white' && myColor === 'white') || (winner === 'black' && myColor === 'black');
       const draw = winner === 'draw';
       endGame(won ? 'w' : draw ? 'd' : 'b', reason);
     });
     socket.on('draw_offered', () => {
-      setDrawReceived(true);
-      toast('Opponent offers a draw!', { icon: '🤝', duration: 15000 });
+      if (window.confirm('Opponent offers a draw. Accept?')) {
+        socket.emit('draw_response', { gameId, accepted: true });
+      } else {
+        socket.emit('draw_response', { gameId, accepted: false });
+      }
     });
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
     return () => {
@@ -327,33 +303,20 @@ export default function GamePage() {
     return () => clearTimeout(tid);
   }, [fen, started, over, isBot, botDiff, applyMove]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* timer */
+  /* timer - only counts down active player's clock */
   useEffect(() => {
     if (!started || over) return;
     timerRef.current = setInterval(() => {
       if (overRef.current) { clearInterval(timerRef.current); return; }
       const turn = chessRef.current.turn();
-
-      if (isOnline) {
-        // Online: each player only counts down their OWN timer
-        const myTurn = (turn === 'w' && myColor === 'white') || (turn === 'b' && myColor === 'black');
-        if (!myTurn) return; // not my turn, don't count down
-        if (myColor === 'white') {
-          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
-        } else {
-          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
-        }
+      if (turn === 'w') {
+        setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
       } else {
-        // Bot game: count both timers
-        if (turn === 'w') {
-          setWTime((t) => { if (t <= 1) { endGame('b', 'timeout'); return 0; } return t - 1; });
-        } else {
-          setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
-        }
+        setBTime((t) => { if (t <= 1) { endGame('w', 'timeout'); return 0; } return t - 1; });
       }
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [started, over, isOnline, myColor, endGame]);
+  }, [started, over, endGame]);
 
  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -371,18 +334,16 @@ export default function GamePage() {
       if ((turn === 'w' && myColor !== 'white') || (turn === 'b' && myColor !== 'black')) return;
     }
     const chess = chessRef.current, piece = chess.get(sq);
-
-    // If clicking own piece - always reselect it
-    if (piece && piece.color === chess.turn()) {
-      setSelected(sq);
-      const legal = chess.moves({ square: sq, verbose: true });
-      const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
-      legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
-      setHilights(h);
+    if (!selected) {
+      if (piece && piece.color === chess.turn()) {
+        setSelected(sq);
+        const legal = chess.moves({ square: sq, verbose: true });
+        const h = { [sq]: { background: 'rgba(201,168,76,0.5)' } };
+        legal.forEach((m) => { h[m.to] = chess.get(m.to) ? { background: 'radial-gradient(circle, rgba(180,30,30,0.6) 55%, transparent 60%)' } : { background: 'radial-gradient(circle, rgba(201,168,76,0.3) 28%, transparent 32%)' }; });
+        setHilights(h);
+      }
       return;
     }
-
-    if (!selected) return;
     if (isPromo(selected, sq)) {
       const legal = chess.moves({ square: selected, verbose: true }).map((m) => m.to);
       if (legal.includes(sq)) { setPromo({ from: selected, to: sq }); setSelected(null); setHilights({}); return; }
@@ -428,24 +389,17 @@ export default function GamePage() {
   const resign = () => {
     if (!started || over) return;
     if (!window.confirm('Resign this game? You will lose and your opponent wins.')) return;
-    if (isOnline && gameId) {
-      const socket = connectSocket();
-      socket.emit('game_over', { gameId, winner: myColor === 'white' ? 'black' : 'white', reason: 'resignation' });
-    }
     endGame('b', 'resignation');
   };
 
   const abort = () => {
     if (!started || over) return;
     if (moves.length > 1) { toast.error('Cannot abort after move 2'); return; }
-    if (isOnline && gameId) {
-      const socket = connectSocket();
-      socket.emit('game_over', { gameId, winner: 'draw', reason: 'aborted' });
-    }
     clearInterval(timerRef.current);
     overRef.current = true;
     setOver({ winner: null, reason: 'aborted', earned: 0 });
-    toast(isBet ? 'Game aborted — bet refunded' : 'Game aborted');
+    if (isBet) toast('Game aborted — bet refunded');
+    else toast('Game aborted');
   };
 
   const offerDraw = () => {
@@ -551,25 +505,9 @@ export default function GamePage() {
       {/* Opponent */}
       <div className="game-player">
         <div className="gp-left">
-          <div className="gp-av" style={isBot ? {background:'linear-gradient(135deg,#0A0F1E,#0039B3)',border:'2px solid rgba(0,82,255,0.6)',boxShadow:'0 0 12px rgba(0,82,255,0.4)',overflow:'hidden',padding:0} : {}}>
-            {isBot ? (
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                <rect width="36" height="36" fill="#0A0F1E"/>
-                <rect x="9" y="11" width="18" height="14" rx="3" fill="#1a6bff" opacity="0.9"/>
-                <circle cx="14" cy="17" r="2.5" fill="#00E5FF"/>
-                <circle cx="14" cy="17" r="1.2" fill="white"/>
-                <circle cx="22" cy="17" r="2.5" fill="#00E5FF"/>
-                <circle cx="22" cy="17" r="1.2" fill="white"/>
-                <rect x="13" y="21" width="10" height="2" rx="1" fill="#00E5FF" opacity="0.7"/>
-                <rect x="17.5" y="7" width="1.5" height="4" rx="0.75" fill="#4D8BFF"/>
-                <circle cx="18.25" cy="6.5" r="1.5" fill="#00E5FF"/>
-                <rect x="6" y="14" width="3" height="5" rx="1.5" fill="#1a6bff"/>
-                <rect x="27" y="14" width="3" height="5" rx="1.5" fill="#1a6bff"/>
-              </svg>
-            ) : '♟'}
-          </div>
+          <div className="gp-av">{isBot ? '🤖' : '♟'}</div>
           <div>
-            <div className="gp-name" style={isBot?{color:'var(--blue)',fontWeight:800}:{}}>{isBot ? 'ChessWar AI' : isOnline && oppData ? oppData.username : 'Opponent'}</div>
+            <div className="gp-name">{isBot ? `AI · ${diffLabel(botDiff)}` : isOnline && oppData ? oppData.username : 'Opponent'}</div>
             <div className="gp-caps">{capB.map((p,i) => <span key={i}>{PSYMS[p]}</span>)}</div>
           </div>
         </div>
@@ -637,43 +575,6 @@ export default function GamePage() {
     </div>
 
     {/* Bottom sheet game menu */}
-    {/* Draw offer received */}
-    {drawReceived && (
-      <div style={{
-        position:'fixed', bottom: 90, left:16, right:16, zIndex:200,
-        background:'linear-gradient(135deg,#1a1040,#2d1f6e)',
-        borderRadius:20, padding:'18px 20px',
-        border:'2px solid rgba(123,97,255,0.6)',
-        boxShadow:'0 8px 32px rgba(123,97,255,0.4)',
-        display:'flex', flexDirection:'column', gap:12,
-      }}>
-        <div style={{display:'flex', alignItems:'center', gap:10}}>
-          <div style={{fontSize:28}}>🤝</div>
-          <div>
-            <div style={{fontSize:15, fontWeight:800, color:'#fff'}}>Draw Offered</div>
-            <div style={{fontSize:12, color:'rgba(255,255,255,0.6)'}}>Your opponent wants to draw</div>
-          </div>
-        </div>
-        <div style={{display:'flex', gap:10}}>
-          <button onClick={() => {
-            const socket = connectSocket();
-            socket.emit('draw_response', { gameId, accepted: true });
-            setDrawReceived(false);
-          }} style={{flex:1, padding:'12px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#7B61FF,#0052FF)', color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer', boxShadow:'0 4px 12px rgba(123,97,255,0.4)'}}>
-            Accept Draw
-          </button>
-          <button onClick={() => {
-            const socket = connectSocket();
-            socket.emit('draw_response', { gameId, accepted: false });
-            setDrawReceived(false);
-            toast('Draw declined');
-          }} style={{flex:1, padding:'12px', borderRadius:12, border:'1.5px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.8)', fontWeight:700, fontSize:14, cursor:'pointer'}}>
-            Decline
-          </button>
-        </div>
-      </div>
-    )}
-
     {showControls && (
       <>
         <div className="game-sheet-overlay" onClick={() => setShowControls(false)} />
@@ -688,12 +589,11 @@ export default function GamePage() {
           <button className="gs-item" onClick={() => { shareGame(); setShowControls(false); }}>
             Share Game
           </button>
-          {!drawOffer && (
+          {!drawOffer && isOnline && (
             <button className="gs-item gs-draw" onClick={() => { offerDraw(); setShowControls(false); }}>
               Offer Draw
             </button>
           )}
-
           <button className="gs-item gs-resign" onClick={() => { resign(); setShowControls(false); }}>
             Resign
           </button>
@@ -739,7 +639,7 @@ export default function GamePage() {
             {!isOnline && <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>}
             {isOnline && <button className="go-btn go-rematch" onClick={() => navigate('/')}>New Game</button>}
             <button className="go-btn" onClick={exportPGN}>Save</button>
-            <button className="go-btn go-home" onClick={() => navigate('/')}>Exit</button>
+
           </div>
         </div>
       </div>

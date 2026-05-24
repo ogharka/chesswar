@@ -5,6 +5,14 @@ import { getLeaderboard } from '../../utils/api';
 export default function LeaderboardPage() {
   const { wallet, profile, points, nftBoost } = useStore();
   const [leaders, setLeaders] = useState([]);
+
+  useEffect(() => {
+    fetch('https://ws.chesswar.xyz/leaderboard')
+      .then(r => r.json())
+      .then(data => setLeaders(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+  const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

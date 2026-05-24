@@ -173,6 +173,24 @@ export default function GamePage() {
     });
     addGameResult({ result: won ? 'win' : draw ? 'draw' : 'loss', mode, opponent: 'Opponent', pointsEarned: earned });
     setOver({ winner, reason, earned, isBet, betAmt: isBet ? betAmt : null });
+
+    // Sync points to server
+    if (window.ethereum?.selectedAddress) {
+      const addr = window.ethereum.selectedAddress;
+      const st = useStore.getState();
+      fetch('https://ws.chesswar.xyz/sync-points', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          address: addr,
+          username: st.profile?.username || 'Anonymous',
+          points: st.points,
+          gamesPlayed: st.profile?.gamesPlayed || 0,
+          wins: st.profile?.gamesWon || 0,
+          nftBoost: st.nftBoost || 1
+        })
+      }).catch(() => {});
+    }
     if (won) sfx('win'); else if (!draw) sfx('loss');
     toast(won ? 'Victory!' : draw ? 'Draw!' : 'Defeated!', { duration: 3000 });
   }, [addPoints, addGameResult, betAmt, isBet, mode, profile, sfx, updateProfile]); // eslint-disable-line react-hooks/exhaustive-deps

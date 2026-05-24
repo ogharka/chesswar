@@ -148,9 +148,9 @@ function getNext4HourSlot(offsetHours) {
 function getTournamentStatus(schedule) {
   const now = new Date();
   // Always open for testing - starts in 30 min + offset
-  const offsetMin = (schedule.offset || 0) * 7;
-  const start = new Date(now.getTime() + (30 + offsetMin) * 60 * 1000);
-  return { status: 'open', ms: (30 + offsetMin) * 60 * 1000, startDate: start };
+  const offsetMin = (schedule.offset || 0) * 1;
+  const start = new Date(now.getTime() + (3 + offsetMin) * 60 * 1000);
+  return { status: 'open', ms: (3 + offsetMin) * 60 * 1000, startDate: start };
 }
 
 function CountdownDisplay({ ms, label }) {

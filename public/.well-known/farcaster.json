@@ -1,16 +1,22 @@
 {
   "accountAssociation": {
-    "header": "placeholder",
-    "payload": "placeholder",
-    "signature": "placeholder"
+    "header": "eyJmaWQiOjY0ODkxMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDAzMDA4QWE3NDBmNzIwZmY1NkQ1MGIwRjJEQzJBM2FiQ2Q3MmU4YTUifQ",
+    "payload": "eyJkb21haW4iOiJ3d3cuY2hlc3N3YXIueHl6In0",
+    "signature": "N+1CXSJSd/EsU5qi/6NJjwi1XjerY5Pk6qoHGUAOlqoT+8w4F5JeqMWulWXnn1pf/Q1kN3qGUcjhPvIOibY1oBw="
   },
   "frame": {
     "version": "1",
     "name": "ChessWar",
-    "iconUrl": "https://chesswar.xyz/logo192.png",
-    "homeUrl": "https://chesswar.xyz",
-    "splashImageUrl": "https://chesswar.xyz/logo192.png",
+    "iconUrl": "https://www.chesswar.xyz/logo192.png",
+    "homeUrl": "https://www.chesswar.xyz",
+    "splashImageUrl": "https://www.chesswar.xyz/logo192.png",
     "splashBackgroundColor": "#0052FF",
-    "webhookUrl": "https://chesswar.xyz/api/webhook"
+    "webhookUrl": "https://www.chesswar.xyz/api/webhook",
+    "subtitle": "Chess with USDC betting on Base",
+    "description": "Play chess, bet USDC, earn points and NFTs on Base blockchain",
+    "primaryCategory": "games",
+    "buttonTitle": "Play Now",
+    "imageUrl": "https://www.chesswar.xyz/logo192.png",
+    "tags": ["chess", "gaming", "base", "bet"]
   }
 }

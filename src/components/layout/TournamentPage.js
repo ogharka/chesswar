@@ -29,9 +29,6 @@ const Icons = {
   ),
 };
 
-// Blitz start time fixed when page loads
-const BLITZ_START = Date.now() + 2 * 60 * 1000;
-
 const TOURNAMENTS = [
   {
     id: 'blitz-4hr',
@@ -86,30 +83,27 @@ const TOURNAMENTS = [
   },
 ];
 
-function getTournamentStatus(t) {
+function getTournamentStatus(t, serverTimes = {}) {
   const now = Date.now();
   if (t.scheduleType === 'blitz') {
-    const ms = BLITZ_START - now;
-    if (ms <= 0) return { status: 'starting', ms: 0, startDate: new Date(BLITZ_START) };
-    return { status: 'open', ms, startDate: new Date(BLITZ_START) };
+    const startTs = serverTimes['blitz-4hr'] || (Date.now() + 2 * 60 * 1000);
+    const ms = startTs - now;
+    if (ms <= 0) return { status: 'starting', ms: 0, startDate: new Date(startTs) };
+    return { status: 'open', ms, startDate: new Date(startTs) };
   }
   if (t.scheduleType === 'daily') {
-    const next = new Date();
-    next.setUTCHours(20, 0, 0, 0);
-    if (next.getTime() <= now) next.setUTCDate(next.getUTCDate() + 1);
-    const ms = next.getTime() - now;
+    const startTs = serverTimes['daily-champ'] || (() => { const n = new Date(); n.setUTCHours(20,0,0,0); if(n.getTime()<=now) n.setUTCDate(n.getUTCDate()+1); return n.getTime(); })();
+    const next = new Date(startTs);
+    const ms = startTs - now;
     const regOpen = new Date(next.getTime() - 2 * 60 * 60 * 1000);
     if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
     if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
     return { status: 'upcoming', ms: regOpen.getTime() - now, startDate: next };
   }
   if (t.scheduleType === 'weekly') {
-    const next = new Date();
-    const day = next.getUTCDay();
-    const daysUntilFri = (5 - day + 7) % 7 || 7;
-    next.setUTCDate(next.getUTCDate() + daysUntilFri);
-    next.setUTCHours(18, 0, 0, 0);
-    const ms = next.getTime() - now;
+    const startTs = serverTimes['weekly-grand'] || (() => { const n = new Date(); const d=(5-n.getUTCDay()+7)%7||7; n.setUTCDate(n.getUTCDate()+d); n.setUTCHours(18,0,0,0); return n.getTime(); })();
+    const next = new Date(startTs);
+    const ms = startTs - now;
     const regOpen = new Date(next.getTime() - 24 * 60 * 60 * 1000);
     if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
     if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
@@ -151,14 +145,23 @@ export default function TournamentPage() {
   const { joinedTournaments, joinTournament, wallet, profile } = useStore();
   const navigate = useNavigate();
   const [statuses, setStatuses] = useState({});
+  const [serverTimes, setServerTimes] = useState({});
   const [loading, setLoading] = useState(null);
   const [playerCounts, setPlayerCounts] = useState({ 'blitz-4hr': 0, 'daily-champ': 0, 'weekly-grand': 0 });
+
+  useEffect(() => {
+    // Fetch tournament times from server (same for all users)
+    fetch('https://ws.chesswar.xyz/tournament-times')
+      .then(r => r.json())
+      .then(data => setServerTimes(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const update = () => {
       const s = {};
       TOURNAMENTS.forEach(t => {
-        const ts = getTournamentStatus(t);
+        const ts = getTournamentStatus(t, serverTimes);
         s[t.id] = ts;
         if (ts.status === 'starting' && joinedTournaments.find(j => j.id === t.id) && wallet?.address) {
           fetch('https://ws.chesswar.xyz/tournament/start', {

@@ -110,19 +110,31 @@ export default function Dashboard() {
       <div>
         <div className="section-title">Mode</div>
         <div className="mode-grid">
-          <div
-            className={`mode-card ${mode === 'pvp-free' ? 'active' : ''}`}
-            onClick={() => setMode('pvp-free')}
-            style={mode === 'pvp-free' ? {borderColor:'var(--purple)',background:'linear-gradient(135deg,#fff 60%,#F5F3FF)'} : {}}
-          >
-            <div className="mc-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-free'?'var(--purple)':'var(--t2)'} strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
+          <div className={`mode-card ${mode==='bot'?'active':''}`} onClick={()=>setMode('bot')} style={mode==='bot'?{borderColor:'var(--green)',background:'linear-gradient(135deg,#fff 60%,#E6F9F1)'}:{}}>
+            <div className="mc-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='bot'?'var(--green)':'var(--t2)'} strokeWidth="2"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><circle cx="9" cy="13" r="1" fill={mode==='bot'?'var(--green)':'var(--t2)'}/><circle cx="15" cy="13" r="1" fill={mode==='bot'?'var(--green)':'var(--t2)'}/></svg></div>
+            <div className="mc-title">vs Bot</div>
+            <div className="mc-sub">Play against AI</div>
+            <span className="mc-tag" style={{background:'#E6F9F1',color:'var(--green)'}}>Free</span>
+          </div>
+          <div className={`mode-card ${mode==='pvp-free'?'active':''}`} onClick={()=>setMode('pvp-free')} style={mode==='pvp-free'?{borderColor:'#8B5CF6',background:'linear-gradient(135deg,#fff 60%,#F5F3FF)'}:{}}>
+            <div className="mc-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-free'?'#8B5CF6':'var(--t2)'} strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <div className="mc-title">Play Online</div>
+            <div className="mc-sub">Free matchmaking</div>
+            <span className="mc-tag" style={{background:'#F5F3FF',color:'#8B5CF6'}}>Free</span>
+          </div>
+          <div className={`mode-card ${mode==='bet'?'active':''}`} onClick={()=>setMode('bet')} style={mode==='bet'?{borderColor:'var(--blue)',background:'linear-gradient(135deg,#fff 60%,var(--blue-light))'}:{}}>
+            <div className="mc-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='bet'?'var(--blue)':'var(--t2)'} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <div className="mc-title">Bet Battle</div>
+            <div className="mc-sub">Wager USDC</div>
+            <span className="mc-tag" style={{background:'var(--blue-light)',color:'var(--blue)'}}>5× Points</span>
+          </div>
+          <div className={`mode-card ${mode==='pvp-friend'?'active':''}`} onClick={()=>setMode('pvp-friend')} style={mode==='pvp-friend'?{borderColor:'var(--gold)',background:'linear-gradient(135deg,#fff 60%,#FEF3C7)'}:{}}>
+            <div className="mc-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={mode==='pvp-friend'?'var(--gold)':'var(--t2)'} strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+            <div className="mc-title">Play with Friend</div>
+            <div className="mc-sub">Share invite link</div>
+            <span className="mc-tag" style={{background:'#FEF3C7',color:'var(--gold)'}}>Invite</span>
+          </div>
+        </div>
             <div className="mc-title">Play Online</div>
             <div className="mc-sub">Free PvP · coming soon</div>
             <span className="mc-tag" style={{background:'#F5F3FF',color:'var(--purple)'}}>Free</span>

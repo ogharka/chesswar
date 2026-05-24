@@ -150,7 +150,12 @@ export default function App() {
   }, []); // eslint-disable-line
 
   useEffect(() => {
-    if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) setShowUsername(true);
+    if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) {
+      // Wait briefly for server fetch to complete before showing setup
+      setTimeout(() => {
+        if (!useStore.getState().profile.username) setShowUsername(true);
+      }, 2000);
+    }
   }, [wallet, profile.username]);
 
   if (booting) return (

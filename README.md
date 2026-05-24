@@ -56,10 +56,10 @@ Four tiers of on-chain NFTs minted on Base. Each tier unlocks a permanent point 
 
 | NFT | Multiplier | Mint Price |
 |---|---|---|
-| Soldier  | 2× | 0.005 ETH |
-| Knight  | 3× | 0.010 ETH |
-| Commander  | 4× | 0.025 ETH |
-| Warlord  | 5× | 0.050 ETH |
+| Soldier  | 2× | 0.001 ETH |
+| Knight  | 3× | 0.0030 ETH |
+| Commander  | 4× | 0.005 ETH |
+| Warlord  | 5× | 0.010 ETH |
 
 Your highest-tier NFT determines your active boost. Boosts stack with bet game multipliers.
 

@@ -168,7 +168,10 @@ export default function Dashboard() {
       <div>
         <div className="section-title">Time Control</div>
         <div className="time-grid">
-          {TIME_OPTS.map(t => (
+          {(mode === 'pvp-free' || mode === 'bet'
+            ? TIME_OPTS.filter(t => t.val === 5 || t.val === 10)
+            : TIME_OPTS
+          ).map(t => (
             <div
               key={t.val}
               className={`time-card ${selTime === t.val ? 'active' : ''}`}

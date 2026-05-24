@@ -638,7 +638,8 @@ export default function GamePage() {
           <div className="go-actions">
             {!isOnline && <button className="go-btn go-rematch" onClick={rematch}>Rematch</button>}
             {isOnline && <button className="go-btn go-rematch" onClick={() => navigate('/')}>New Game</button>}
-            <button className="go-btn" onClick={exportPGN}>Save</button>
+            <button className="go-btn" onClick={exportPGN}>Share Game</button>
+            <button className="go-btn go-home" onClick={() => navigate('/')}>Home</button>
 
           </div>
         </div>

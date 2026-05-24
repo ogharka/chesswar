@@ -47,11 +47,11 @@ const TOURNAMENTS = [
   {
     id: 'daily-blitz',
     name: 'Daily Blitz',
-    subtitle: 'Fast & Furious · Every Day 8 PM UTC',
+    subtitle: 'Fast & Furious · Every 4 Hours',
     entry: 5,
     maxPlayers: 8,
     timeControl: '3 min',
-    schedule: { hour: 20, minute: 0, days: 'every', forceOpen: true, forceMs: 58 * 60 * 1000 },
+    schedule: { offset: 0 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #003BBF 0%, #0052FF 60%, #1A6BFF 100%)',
     accentColor: '#0052FF',
@@ -64,11 +64,11 @@ const TOURNAMENTS = [
   {
     id: 'weekly-champion',
     name: 'Weekly Champion',
-    subtitle: 'Prove Your Worth · Every Friday 6 PM UTC',
+    subtitle: 'Prove Your Worth · Every 4 Hours',
     entry: 5,
     maxPlayers: 16,
     timeControl: '5 min',
-    schedule: { hour: 18, minute: 0, days: 5, forceOpen: true, forceMs: 52 * 60 * 1000 },
+    schedule: { offset: 1 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #1A0A4F 0%, #3B1FBF 55%, #6B4FFF 100%)',
     accentColor: '#7B61FF',
@@ -81,11 +81,11 @@ const TOURNAMENTS = [
   {
     id: 'bet-masters',
     name: 'Bet Masters Cup',
-    subtitle: 'High Stakes Glory · Every Sunday 4 PM UTC',
+    subtitle: 'High Stakes Glory · Every 4 Hours',
     entry: 5,
     maxPlayers: 32,
     timeControl: '5 min',
-    schedule: { hour: 16, minute: 0, days: 0, forceOpen: true, forceMs: 45 * 60 * 1000 },
+    schedule: { offset: 2 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #1A0F00 0%, #7B4F00 50%, #C9A84C 100%)',
     accentColor: '#C9A84C',
@@ -98,11 +98,11 @@ const TOURNAMENTS = [
   {
     id: 'rapid-weekend',
     name: 'Rapid Weekend',
-    subtitle: 'Weekend Warriors · Every Saturday 2 PM UTC',
+    subtitle: 'Weekend Warriors · Every 4 Hours',
     entry: 5,
     maxPlayers: 16,
     timeControl: '10 min',
-    schedule: { hour: 14, minute: 0, days: 6, forceOpen: true, forceMs: 38 * 60 * 1000 },
+    schedule: { offset: 3 },
     prizes: [60, 25, 7.5, 7.5],
     bg: 'linear-gradient(135deg, #003040 0%, #005F8A 50%, #0096C7 100%)',
     accentColor: '#0096C7',
@@ -129,15 +129,26 @@ function getNextOccurrence(schedule) {
   return next;
 }
 
+function getNext4HourSlot(offsetHours) {
+  const now = new Date();
+  // 4-hour slots: 0, 4, 8, 12, 16, 20 UTC + offset
+  const utcHour = now.getUTCHours();
+  const slot = Math.floor(utcHour / 4) * 4 + offsetHours % 4;
+  const next = new Date(now);
+  next.setUTCMinutes(0, 0, 0);
+  if (utcHour >= slot) {
+    next.setUTCHours(slot + 4);
+  } else {
+    next.setUTCHours(slot);
+  }
+  if (next <= now) next.setUTCHours(next.getUTCHours() + 4);
+  return next;
+}
+
 function getTournamentStatus(schedule) {
   const now = new Date();
-  if (schedule.forceOpen) {
-    const ms = schedule.forceMs || 58 * 60 * 1000;
-    const start = new Date(now.getTime() + ms);
-    return { status: 'open', ms, startDate: start };
-  }
-  const start = getNextOccurrence(schedule);
-  const regOpen = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+  const start = getNext4HourSlot(schedule.offset || 0);
+  const regOpen = new Date(start.getTime() - 60 * 60 * 1000); // opens 1hr before
   const msUntilStart = start - now;
   const msUntilReg = regOpen - now;
   if (msUntilStart < 0) return { status: 'live', ms: 0, startDate: start };

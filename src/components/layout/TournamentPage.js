@@ -145,12 +145,20 @@ function getNext4HourSlot(offsetHours) {
   return next;
 }
 
+// Fixed start times - same for ALL users (Unix timestamps)
+const FIXED_STARTS = {
+  0: Math.ceil(Date.now() / (4*60*60*1000)) * (4*60*60*1000) + 3*60*1000,
+  1: Math.ceil(Date.now() / (4*60*60*1000)) * (4*60*60*1000) + 4*60*1000,
+  2: Math.ceil(Date.now() / (4*60*60*1000)) * (4*60*60*1000) + 5*60*1000,
+  3: Math.ceil(Date.now() / (4*60*60*1000)) * (4*60*60*1000) + 6*60*1000,
+};
+
 function getTournamentStatus(schedule) {
-  const now = new Date();
-  // Always open for testing - starts in 30 min + offset
-  const offsetMin = (schedule.offset || 0) * 1;
-  const start = new Date(now.getTime() + (3 + offsetMin) * 60 * 1000);
-  return { status: 'open', ms: (3 + offsetMin) * 60 * 1000, startDate: start };
+  const now = Date.now();
+  const startTs = FIXED_STARTS[schedule.offset || 0];
+  const ms = startTs - now;
+  if (ms < 0) return { status: 'live', ms: 0, startDate: new Date(startTs) };
+  return { status: 'open', ms, startDate: new Date(startTs) };
 }
 
 function CountdownDisplay({ ms, label }) {

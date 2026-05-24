@@ -231,6 +231,11 @@ export default function GamePage() {
     if (!isOnline || !gameId) return;
     const socket = connectSocket();
     socket.emit('join_game', { gameId });
+    
+    // Rejoin game room on reconnect
+    socket.on('connect', () => {
+      socket.emit('join_game', { gameId });
+    });
 
     // Idle timeout - 50s at start, 2min during game
     let idleTimer = setTimeout(() => {

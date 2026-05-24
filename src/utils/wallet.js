@@ -8,27 +8,13 @@ export const BASE_CHAIN = {
   blockExplorerUrls: ['https://basescan.org'],
 };
 
-export const BASE_SEPOLIA = {
-  chainId: '0x14a34',
-  chainName: 'Base',
-  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-  rpcUrls: ['https://mainnet.base.org'],
-  blockExplorerUrls: ['https://basescan.org'],
-};
-
-// ─── Switch to BASE_CHAIN for mainnet deployment ───────────────────────────
 export const TARGET = BASE_CHAIN;
 
-// USDC contract addresses
 export const USDC_ADDRESS = {
-  // Base testnet
   '0x14a34': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-  // Base Mainnet
   '0x2105':  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
 };
 
-// ChessWar platform wallet — receives deposits, holds battle funds
-// REPLACE THIS with your actual deployed contract address
 export const PLATFORM_ADDRESS = process.env.REACT_APP_VAULT_ADDRESS || '0x0000000000000000000000000000000000000001';
 
 export const USDC_ABI = [
@@ -40,7 +26,38 @@ export const USDC_ABI = [
   'function symbol() view returns (string)',
 ];
 
+// Detect if running inside Farcaster Mini App
+export function isFarcaster() {
+  return window.self !== window.top || !!window?.ReactNativeWebView;
+}
+
 export async function connectWallet() {
+  // ── Farcaster Mini App path ──────────────────────────────────────────────
+  if (isFarcaster()) {
+    try {
+      const { sdk } = await import('@farcaster/frame-sdk');
+      await sdk.actions.ready();
+      const ethProvider = sdk.wallet.ethProvider;
+      if (!ethProvider) throw new Error('Farcaster wallet not available');
+      const provider = new ethers.BrowserProvider(ethProvider);
+      await provider.send('eth_requestAccounts', []);
+      // Switch to Base
+      try {
+        await provider.send('wallet_switchEthereumChain', [{ chainId: TARGET.chainId }]);
+      } catch (e) {
+        if (e.code === 4902) {
+          await provider.send('wallet_addEthereumChain', [TARGET]);
+        }
+      }
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      return { provider, signer, address };
+    } catch (e) {
+      throw new Error('Farcaster wallet connection failed: ' + e.message);
+    }
+  }
+
+  // ── Regular browser path (MetaMask / Coinbase) ───────────────────────────
   if (!window.ethereum) throw new Error('No wallet found. Please install MetaMask.');
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   try {
@@ -59,7 +76,6 @@ export async function connectWallet() {
   return { provider, signer, address };
 }
 
-// Get USDC balance of any address
 export async function getUSDCBalance(address, provider) {
   const usdcAddr = USDC_ADDRESS[TARGET.chainId] || USDC_ADDRESS['0x14a34'];
   try {
@@ -69,7 +85,6 @@ export async function getUSDCBalance(address, provider) {
   } catch { return '0.00'; }
 }
 
-// Get ETH balance
 export async function getETHBalance(address, provider) {
   try {
     const bal = await provider.getBalance(address);
@@ -83,37 +98,28 @@ const VAULT_ABI = [
   'function balances(address) view returns (uint256)',
 ];
 
-// Deposit USDC into ChessWar Vault
 export async function depositUSDC(amount, signer, provider) {
   const usdcAddr  = USDC_ADDRESS[TARGET.chainId] || USDC_ADDRESS['0x2105'];
   const vaultAddr = PLATFORM_ADDRESS;
-  
   const usdc  = new ethers.Contract(usdcAddr, USDC_ABI, signer);
   const vault = new ethers.Contract(vaultAddr, VAULT_ABI, signer);
   const decimals = await usdc.decimals();
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
-
-  // Check balance
   const address = await signer.getAddress();
   const balance = await usdc.balanceOf(address);
   if (balance < amountWei) {
     throw new Error(`Insufficient USDC. You have ${ethers.formatUnits(balance, decimals)} USDC.`);
   }
-
-  // Step 1: Approve vault to spend USDC
   const allowance = await usdc.allowance(address, vaultAddr);
   if (allowance < amountWei) {
     const approveTx = await usdc.approve(vaultAddr, amountWei);
     await approveTx.wait();
   }
-
-  // Step 2: Deposit into vault
   const tx = await vault.deposit(amountWei);
   const receipt = await tx.wait();
   return receipt;
 }
 
-// Withdraw USDC from ChessWar Vault
 export async function withdrawUSDC(amount, toAddress, signer) {
   const vaultAddr = PLATFORM_ADDRESS;
   const vault = new ethers.Contract(vaultAddr, VAULT_ABI, signer);
@@ -127,6 +133,6 @@ export async function withdrawUSDC(amount, toAddress, signer) {
   return receipt;
 }
 
-export const shortAddr  = (a) => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '';
+export const shortAddr   = (a) => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '';
 export const explorerUrl = (a) => `${TARGET.blockExplorerUrls[0]}/address/${a}`;
 export const txUrl       = (hash) => `${TARGET.blockExplorerUrls[0]}/tx/${hash}`;

@@ -346,9 +346,27 @@ export default function TournamentPage() {
               </div>
 
               {/* Button */}
-              <button onClick={() => join(t)} disabled={!!joined || isLive || isLoading}
-                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined||isLive ? 'not-allowed' : 'pointer', background: joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
-                {isLoading ? '⏳ Processing...' : joined ? `✓ Registered (${registeredCount}/${t.maxPlayers} players)` : isLive ? 'Tournament In Progress' : isUpcoming ? 'Registration Not Open Yet' : `Register Now · ${t.entry} USDC`}
+              <button onClick={() => {
+                if (joined && isLive) {
+                  // Enter tournament lobby
+                  const socket = connectSocket();
+                  socket.emit('tournament_join', {
+                    tournamentId: t.id,
+                    address: wallet?.address || '',
+                    username: profile?.username || 'Anonymous'
+                  });
+                  toast.success('Entering tournament...');
+                  return;
+                }
+                join(t);
+              }} disabled={isLoading || (isLive && !joined)}
+                style={{ width:'100%', padding:'15px', borderRadius:14, fontSize:15, fontWeight:800, border:'none', cursor: joined||isLive ? 'not-allowed' : 'pointer', background: joined && isLive ? `linear-gradient(135deg,#059669,#047857)` : joined ? '#E6F9F1' : isUpcoming ? '#F1F5F9' : isLive ? '#FEF2F2' : `linear-gradient(135deg,${t.accentColor},${t.accentColor}CC)`, color: joined && isLive ? '#fff' : joined ? '#059669' : isUpcoming ? '#94A3B8' : isLive ? '#DC2626' : '#fff', boxShadow: joined && isLive ? '0 6px 20px rgba(5,150,105,0.4)' : joined||isUpcoming||isLive ? 'none' : `0 6px 20px ${t.glowColor}` }}>
+                {isLoading ? '⏳ Processing...' : 
+                 joined && isLive ? '🎮 Enter Tournament Now!' :
+                 joined ? `✓ Registered (${registeredCount}/${t.maxPlayers} players)` : 
+                 isLive ? 'Tournament In Progress' : 
+                 isUpcoming ? 'Registration Not Open Yet' : 
+                 `Register Now · ${t.entry} USDC`}
               </button>
 
               {isOpen && !joined && <div style={{ textAlign:'center', fontSize:10, color:'#94A3B8', marginTop:6 }}>Full refund if fewer than 4 players register</div>}

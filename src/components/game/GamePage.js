@@ -151,6 +151,7 @@ export default function GamePage() {
   const [capB,      setCapB]     = useState([]);
   const [promo,     setPromo]    = useState(null);
   const [drawOffer,    setDrawOffer]    = useState(false);
+  const [drawReceived, setDrawReceived] = useState(false);
   const [shareMsg,     setShareMsg]     = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -301,11 +302,8 @@ export default function GamePage() {
       endGame(won ? 'w' : draw ? 'd' : 'b', reason);
     });
     socket.on('draw_offered', () => {
-      if (window.confirm('Opponent offers a draw. Accept?')) {
-        socket.emit('draw_response', { gameId, accepted: true });
-      } else {
-        socket.emit('draw_response', { gameId, accepted: false });
-      }
+      setDrawReceived(true);
+      toast('Opponent offers a draw!', { icon: '🤝', duration: 15000 });
     });
     socket.on('draw_declined', () => toast.error('Opponent declined draw'));
     return () => {
@@ -639,6 +637,43 @@ export default function GamePage() {
     </div>
 
     {/* Bottom sheet game menu */}
+    {/* Draw offer received */}
+    {drawReceived && (
+      <div style={{
+        position:'fixed', bottom: 90, left:16, right:16, zIndex:200,
+        background:'linear-gradient(135deg,#1a1040,#2d1f6e)',
+        borderRadius:20, padding:'18px 20px',
+        border:'2px solid rgba(123,97,255,0.6)',
+        boxShadow:'0 8px 32px rgba(123,97,255,0.4)',
+        display:'flex', flexDirection:'column', gap:12,
+      }}>
+        <div style={{display:'flex', alignItems:'center', gap:10}}>
+          <div style={{fontSize:28}}>🤝</div>
+          <div>
+            <div style={{fontSize:15, fontWeight:800, color:'#fff'}}>Draw Offered</div>
+            <div style={{fontSize:12, color:'rgba(255,255,255,0.6)'}}>Your opponent wants to draw</div>
+          </div>
+        </div>
+        <div style={{display:'flex', gap:10}}>
+          <button onClick={() => {
+            const socket = connectSocket();
+            socket.emit('draw_response', { gameId, accepted: true });
+            setDrawReceived(false);
+          }} style={{flex:1, padding:'12px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#7B61FF,#0052FF)', color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer', boxShadow:'0 4px 12px rgba(123,97,255,0.4)'}}>
+            Accept Draw
+          </button>
+          <button onClick={() => {
+            const socket = connectSocket();
+            socket.emit('draw_response', { gameId, accepted: false });
+            setDrawReceived(false);
+            toast('Draw declined');
+          }} style={{flex:1, padding:'12px', borderRadius:12, border:'1.5px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.8)', fontWeight:700, fontSize:14, cursor:'pointer'}}>
+            Decline
+          </button>
+        </div>
+      </div>
+    )}
+
     {showControls && (
       <>
         <div className="game-sheet-overlay" onClick={() => setShowControls(false)} />

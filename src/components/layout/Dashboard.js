@@ -22,13 +22,14 @@ export default function Dashboard() {
   const [mode,       setMode]       = useState('bot'); // bot | bet | pvp | pvp-free
   const [betAmt,     setBetAmt]     = useState('0.10');
   const [searching,  setSearching]  = useState(false);
+  const [botDiff,    setBotDiff]    = useState('intermediate');
 
   const winRate = profile.gamesPlayed
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
 
   const handlePlay = async () => {
     if (mode === 'bot') {
-      navigate('/play/bot', { state: { timeControl: selTime } });
+      navigate('/play/bot', { state: { timeControl: selTime, botDiff } });
       return;
     }
 
@@ -159,6 +160,19 @@ export default function Dashboard() {
               >
                 {p}
               </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {mode === 'bot' && (
+        <div style={{marginBottom:8}}>
+          <div className="section-title">Difficulty</div>
+          <div style={{display:'flex',gap:6,padding:'3px',background:'var(--raised)',borderRadius:14,border:'1px solid var(--border)'}}>
+            {[{val:'beginner',label:'Easy'},{val:'intermediate',label:'Medium'},{val:'hard',label:'Hard'},{val:'veryhard',label:'Master'}].map(d => (
+              <div key={d.val} onClick={()=>setBotDiff(d.val)} style={{flex:1,textAlign:'center',padding:'9px 4px',borderRadius:11,background:botDiff===d.val?'#fff':'transparent',boxShadow:botDiff===d.val?'0 2px 8px rgba(0,0,0,0.1)':'none',cursor:'pointer',transition:'all .2s'}}>
+                <div style={{fontSize:11,fontWeight:botDiff===d.val?800:600,color:botDiff===d.val?'var(--blue)':'var(--t3)',letterSpacing:.2}}>{d.label}</div>
+              </div>
             ))}
           </div>
         </div>

@@ -177,7 +177,7 @@ export default function Dashboard() {
               className={`time-card ${selTime === t.val ? 'active' : ''}`}
               onClick={() => setSelTime(t.val)}
             >
-              <div className={`tc-time ${selTime === t.val ? 'active' : ''}`}>{t.val}</div>
+              <div className={`tc-time ${selTime === t.val ? 'active' : ''}`}>{t.val}<span style={{fontSize:10,fontWeight:600,opacity:0.7}}>m</span></div>
               <div className="tc-label">{t.type}</div>
             </div>
           ))}

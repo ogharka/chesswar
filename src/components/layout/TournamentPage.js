@@ -12,7 +12,7 @@ export default function TournamentPage() {
       </div>
       <div style={{ background:'linear-gradient(135deg,#0A0F1E,#001466)', borderRadius:20, padding:'20px 32px', border:'1px solid rgba(0,82,255,0.3)' }}>
         <div style={{ fontSize:13, fontWeight:800, color:'#60A5FA', letterSpacing:2, textTransform:'uppercase', marginBottom:4 }}>Coming Soon</div>
-        <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Launching with the token</div>
+        <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>Coming soon</div>
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', maxWidth:300 }}>
         {[

@@ -26,7 +26,16 @@ export default function UsernameSetup({ onDone }) {
   const handleSubmit = () => {
     const err = validate(username);
     if (err) { setError(err); return; }
-    updateProfile({ username: username.trim(), avatar });
+    const trimmed = username.trim();
+    updateProfile({ username: trimmed, avatar });
+    // Sync to server so other devices can fetch it
+    if (wallet?.address) {
+      fetch('https://ws.chesswar.xyz/sync-points', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ address: wallet.address, username: trimmed, points: 0, gamesPlayed: 0, wins: 0, nftBoost: 1 })
+      }).catch(() => {});
+    }
     toast.success(`Welcome to ChessWar, ${username}!`);
     onDone();
   };

@@ -130,6 +130,17 @@ export default function App() {
               }
               await syncNFTBoost().catch(() => {});
             } catch { /* backend offline */ }
+            // Fallback: fetch username from our WebSocket server
+            try {
+              const res = await fetch(`https://ws.chesswar.xyz/leaderboard`);
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                const user = data.find(u => u.address === address.toLowerCase());
+                if (user?.username && user.username !== 'Anonymous') {
+                  updateProfile({ username: user.username });
+                }
+              }
+            } catch {}
           }
         } catch { /* silent */ }
       }

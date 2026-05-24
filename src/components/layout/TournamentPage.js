@@ -94,22 +94,20 @@ function getTournamentStatus(t, serverTimes = {}) {
     return { status: 'open', ms, startDate: new Date(BLITZ_START) };
   }
   if (t.scheduleType === 'daily') {
-    const startTs = serverTimes['daily-champ'] || (() => { const n=new Date(); n.setUTCHours(20,0,0,0); if(n<=now) n.setUTCDate(n.getUTCDate()+1); return n.getTime(); })();
-    const next = new Date(startTs);
+    const startTs = serverTimes['daily-champ'] || (() => { const n=new Date(); n.setUTCHours(20,0,0,0); if(n.getTime()<=now) n.setUTCDate(n.getUTCDate()+1); return n.getTime(); })();
     const ms = startTs - now;
-    const regOpen = new Date(next.getTime() - 2 * 60 * 60 * 1000);
-    if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
-    if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
-    return { status: 'upcoming', ms: regOpen.getTime() - now, startDate: next };
+    if (ms <= -5*60*1000) return { status: 'expired', ms: 0, startDate: new Date(startTs) };
+    if (ms <= 0) return { status: 'enter_now', ms: 5*60*1000+ms, startDate: new Date(startTs) };
+    if (ms <= 30*60*1000) return { status: 'reg_closed', ms, startDate: new Date(startTs) };
+    return { status: 'open', ms, startDate: new Date(startTs) };
   }
   if (t.scheduleType === 'weekly') {
     const startTs = serverTimes['weekly-grand'] || (() => { const n=new Date(); const d=(5-n.getUTCDay()+7)%7||7; n.setUTCDate(n.getUTCDate()+d); n.setUTCHours(18,0,0,0); return n.getTime(); })();
-    const next = new Date(startTs);
     const ms = startTs - now;
-    const regOpen = new Date(next.getTime() - 24 * 60 * 60 * 1000);
-    if (ms <= 0) return { status: 'starting', ms: 0, startDate: next };
-    if (regOpen.getTime() <= now) return { status: 'open', ms, startDate: next };
-    return { status: 'upcoming', ms: regOpen.getTime() - now, startDate: next };
+    if (ms <= -5*60*1000) return { status: 'expired', ms: 0, startDate: new Date(startTs) };
+    if (ms <= 0) return { status: 'enter_now', ms: 5*60*1000+ms, startDate: new Date(startTs) };
+    if (ms <= 60*60*1000) return { status: 'reg_closed', ms, startDate: new Date(startTs) };
+    return { status: 'open', ms, startDate: new Date(startTs) };
   }
   return { status: 'upcoming', ms: 0, startDate: new Date() };
 }

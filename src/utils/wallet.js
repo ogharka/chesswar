@@ -17,6 +17,8 @@ export const USDC_ADDRESS = {
 
 export const PLATFORM_ADDRESS = process.env.REACT_APP_VAULT_ADDRESS || '0x0000000000000000000000000000000000000001';
 
+const BUILDER_CODE = "0x07626173656170700080218021802180218021802180218021";
+
 export const USDC_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function decimals() view returns (uint8)',
@@ -26,13 +28,11 @@ export const USDC_ABI = [
   'function symbol() view returns (string)',
 ];
 
-// Detect if running inside Farcaster Mini App
 export function isFarcaster() {
   return window.self !== window.top || !!window?.ReactNativeWebView;
 }
 
 export async function connectWallet() {
-  // ── Farcaster Mini App path ──────────────────────────────────────────────
   if (isFarcaster()) {
     try {
       const { sdk } = await import('@farcaster/frame-sdk');
@@ -41,7 +41,6 @@ export async function connectWallet() {
       if (!ethProvider) throw new Error('Farcaster wallet not available');
       const provider = new ethers.BrowserProvider(ethProvider);
       await provider.send('eth_requestAccounts', []);
-      // Switch to Base
       try {
         await provider.send('wallet_switchEthereumChain', [{ chainId: TARGET.chainId }]);
       } catch (e) {
@@ -57,7 +56,6 @@ export async function connectWallet() {
     }
   }
 
-  // ── Regular browser path (MetaMask / Coinbase) ───────────────────────────
   if (!window.ethereum) throw new Error('No wallet found. Please install MetaMask.');
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   try {
@@ -112,10 +110,10 @@ export async function depositUSDC(amount, signer, provider) {
   }
   const allowance = await usdc.allowance(address, vaultAddr);
   if (allowance < amountWei) {
-    const approveTx = await usdc.approve(vaultAddr, amountWei);
+    const approveTx = await usdc.approve(vaultAddr, amountWei, { data: BUILDER_CODE });
     await approveTx.wait();
   }
-  const tx = await vault.deposit(amountWei);
+  const tx = await vault.deposit(amountWei, { data: BUILDER_CODE });
   const receipt = await tx.wait();
   return receipt;
 }
@@ -128,7 +126,7 @@ export async function withdrawUSDC(amount, toAddress, signer) {
   const decimals = await usdc.decimals();
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
   const address = await signer.getAddress();
-  const tx = await vault.withdraw(amountWei, address);
+  const tx = await vault.withdraw(amountWei, address, { data: BUILDER_CODE });
   const receipt = await tx.wait();
   return receipt;
 }

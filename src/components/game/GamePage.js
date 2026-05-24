@@ -218,13 +218,18 @@ export default function GamePage() {
   }, [endGame, sfx, timeOpt.inc, isOnline, gameId]);
 
 
-  // Auto-start online games
+  // Auto-start online and bot games from dashboard
   useEffect(() => {
-    if (isOnline && !configured) {
+    if ((isOnline || locState.botDiff) && !configured) {
+      if (locState.botDiff) setBotDiff(locState.botDiff);
+      if (locState.timeControl) {
+        const tc = TIME_OPTS.find(t => t.val === locState.timeControl) || TIME_OPTS[2];
+        setTimeOpt(tc);
+      }
       setStarted(true);
       setConfigured(true);
     }
-  }, [isOnline]); // eslint-disable-line
+  }, [isOnline, locState.botDiff]); // eslint-disable-line
 
   // Socket handlers for online games
   useEffect(() => {

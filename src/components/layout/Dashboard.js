@@ -22,13 +22,14 @@ export default function Dashboard() {
   const [mode,       setMode]       = useState('bot'); // bot | bet | pvp | pvp-free
   const [betAmt,     setBetAmt]     = useState('0.10');
   const [searching,  setSearching]  = useState(false);
+  const [botDiff,    setBotDiff]    = useState('intermediate');
 
   const winRate = profile.gamesPlayed
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
 
   const handlePlay = async () => {
     if (mode === 'bot') {
-      navigate('/play/bot', { state: { timeControl: selTime } });
+      navigate('/play/bot', { state: { timeControl: selTime, botDiff } });
       return;
     }
 
@@ -165,6 +166,30 @@ export default function Dashboard() {
       )}
 
       {/* Time control */}
+      {mode === 'bot' && (
+        <div>
+          <div className="section-title">Difficulty</div>
+          <div style={{display:'flex', gap:8, marginBottom:4}}>
+            {[
+              {val:'beginner', label:'Beginner', icon:'🟢'},
+              {val:'intermediate', label:'Intermediate', icon:'🟡'},
+              {val:'hard', label:'Hard', icon:'🔴'},
+              {val:'veryhard', label:'Master', icon:'⚫'},
+            ].map(d => (
+              <div key={d.val} onClick={() => setBotDiff(d.val)} style={{
+                flex:1, textAlign:'center', padding:'10px 4px', borderRadius:12,
+                border: botDiff===d.val ? '2px solid var(--blue)' : '1.5px solid var(--border)',
+                background: botDiff===d.val ? 'var(--blue-light)' : 'var(--card)',
+                cursor:'pointer', transition:'all .15s',
+              }}>
+                <div style={{fontSize:16}}>{d.icon}</div>
+                <div style={{fontSize:10, fontWeight:700, color: botDiff===d.val ? 'var(--blue)' : 'var(--t2)', marginTop:3, letterSpacing:.3}}>{d.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <div className="section-title">Time Control</div>
         <div className="time-grid">

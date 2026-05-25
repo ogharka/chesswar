@@ -2,17 +2,46 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useStore } from './store/useStore';
-import { connectWallet, isFarcaster } from './utils/wallet';
+import { connectWallet } from './utils/wallet';
 import { loginWithWallet, getProfile, syncNFTBoost } from './utils/api';
-import Navbar        from './components/layout/Navbar';
-import ConnectPage   from './components/layout/ConnectPage';
-import UsernameSetup from './components/layout/UsernameSetup';
-import Dashboard     from './components/layout/Dashboard';
-import GamePage      from './components/game/GamePage';
+import Navbar         from './components/layout/Navbar';
+import ConnectPage    from './components/layout/ConnectPage';
+import UsernameSetup  from './components/layout/UsernameSetup';
+import Dashboard      from './components/layout/Dashboard';
+import GamePage       from './components/game/GamePage';
 import TournamentPage from './components/layout/TournamentPage';
 import LeaderboardPage from './components/layout/LeaderboardPage';
-import ProfilePage from './components/layout/ProfilePage';
+import ProfilePage    from './components/layout/ProfilePage';
 import './styles/global.css';
+
+// Detect Farcaster specifically (not Base App)
+function isFarcasterFrame() {
+  try {
+    return window.self !== window.top && !!window.ReactNativeWebView === false
+      && navigator.userAgent.includes('Farcaster');
+  } catch { return false; }
+}
+
+// Detect Base App (Coinbase Wallet webview)
+function isBaseApp() {
+  try {
+    return navigator.userAgent.includes('CoinbaseWallet') ||
+           navigator.userAgent.includes('Coinbase') ||
+           !!window.ethereum?.isCoinbaseWallet;
+  } catch { return false; }
+}
+
+async function loadUserData(address, { setPoints, setNftBoost, updateProfile }) {
+  try {
+    const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
+    const user = await res.json();
+    if (user?.username && user.username !== 'Anonymous') {
+      updateProfile({ username: user.username });
+      if (user.points) setPoints(user.points);
+      if (user.nft_boost) setNftBoost(user.nft_boost);
+    }
+  } catch {}
+}
 
 export default function App() {
   const { wallet, setWallet, setProvider, initProfile, updateProfile,
@@ -20,57 +49,49 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [showUsername, setShowUsername] = useState(false);
 
-  // Initialize Farcaster SDK and auto-connect if inside Farcaster
   useEffect(() => {
-    const init = async () => {
-      try {
-        const { sdk } = await import('@farcaster/frame-sdk');
-        await sdk.actions.ready();
+    const boot = async () => {
+      // Check if user manually disconnected
+      const justDisconnected = (() => { try { return localStorage.getItem('cw_just_disconnected'); } catch { return null; } })();
+      if (justDisconnected) {
+        try { localStorage.removeItem('cw_just_disconnected'); } catch {}
+        setBooting(false);
+        return;
+      }
 
-        // Auto-connect wallet if inside Farcaster
-        if (isFarcaster()) {
-          try {
-            const { provider, signer, address } = await connectWallet();
-            setProvider(provider);
-            setWallet({ address, signer });
-            initProfile(address);
-            try {
-              await loginWithWallet(signer);
-              const user = await getProfile(address);
-              if (user) {
-                updateProfile({
-                  username:    user.username || '',
-                  referralCode: user.referralCode,
-                  gamesPlayed: user.gamesPlayed,
-                  gamesWon:    user.gamesWon,
-                  gamesLost:   user.gamesLost,
-                  gamesDraw:   user.gamesDraw,
-                });
-                if (setPoints)   setPoints(user.points);
-                if (setNftBoost) setNftBoost(user.nftBoost);
-              }
-              await syncNFTBoost().catch(() => {});
-            } catch { /* backend offline */ }
-            // Fetch from ws server
-            try {
-              const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
-              const user = await res.json();
-              if (user?.username && user.username !== 'Anonymous') {
-                updateProfile({ username: user.username });
-                if (user.points) setPoints(user.points);
-              }
-            } catch {}
-          } catch { /* wallet not ready yet, user will click connect */ }
-        }
+      // Try Farcaster SDK first (with short timeout)
+      const farcasterTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+      try {
+        await Promise.race([
+          (async () => {
+            const { sdk } = await import('@farcaster/frame-sdk');
+            await sdk.actions.ready();
+          })(),
+          farcasterTimeout
+        ]);
       } catch {}
+
+      // Try to auto-connect wallet
+      try {
+        const { provider, signer, address } = await connectWallet();
+        setProvider(provider);
+        setWallet({ address, signer });
+        initProfile(address);
+        await loginWithWallet(signer);
+        await loadUserData(address, { setPoints, setNftBoost, updateProfile });
+      } catch {
+        // Can't auto-connect — show connect page
+      }
+
       setBooting(false);
     };
-    init();
+
+    boot();
   }, []); // eslint-disable-line
 
   // Auto-switch to Base mainnet for regular browser
   useEffect(() => {
-    if (!window.ethereum || isFarcaster()) return;
+    if (!window.ethereum) return;
     const switchToBase = async () => {
       try {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
@@ -85,7 +106,10 @@ export default function App() {
           try {
             await window.ethereum.request({
               method: 'wallet_addEthereumChain',
-              params: [{ chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] }],
+              params: [{ chainId: '0x2105', chainName: 'Base',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org'] }],
             });
           } catch {}
         }
@@ -96,61 +120,8 @@ export default function App() {
     return () => window.ethereum.removeListener('chainChanged', switchToBase);
   }, []);
 
-  // Auto-reconnect for regular browser
   useEffect(() => {
-    if (isFarcaster()) return;
-    const tryReconnect = async () => {
-      if (localStorage.getItem("cw_just_disconnected")) {
-        localStorage.removeItem("cw_just_disconnected");
-        setBooting(false);
-        return;
-      }
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            const { ethers } = await import('ethers');
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const address = await signer.getAddress();
-            setProvider(provider);
-            setWallet({ address, signer });
-            initProfile(address);
-            try {
-              await loginWithWallet(signer);
-              const user = await getProfile(address);
-              if (user) {
-                updateProfile({
-                  username:    user.username || '',
-                  referralCode: user.referralCode,
-                  gamesPlayed: user.gamesPlayed,
-                  gamesWon:    user.gamesWon,
-                  gamesLost:   user.gamesLost,
-                  gamesDraw:   user.gamesDraw,
-                });
-                if (setPoints)   setPoints(user.points);
-                if (setNftBoost) setNftBoost(user.nftBoost);
-              }
-              await syncNFTBoost().catch(() => {});
-            } catch {}
-            try {
-              const res = await fetch(`https://ws.chesswar.xyz/user/${address}`);
-              const user = await res.json();
-              if (user?.username && user.username !== 'Anonymous') {
-                updateProfile({ username: user.username });
-                if (user.points) setPoints(user.points);
-              }
-            } catch {}
-          }
-        } catch {}
-      }
-      setBooting(false);
-    };
-    tryReconnect();
-  }, []); // eslint-disable-line
-
-  useEffect(() => {
-    if (wallet && !profile.username && !localStorage.getItem("cw_username_skipped")) {
+    if (wallet && !profile.username && !(() => { try { return localStorage.getItem('cw_username_skipped'); } catch { return null; } })()) {
       fetch(`https://ws.chesswar.xyz/user/${wallet.address}`)
         .then(r => r.json())
         .then(user => {
@@ -165,7 +136,7 @@ export default function App() {
     }
   }, [wallet, profile.username]); // eslint-disable-line
 
- if (booting) return (
+  if (booting) return (
     <div className="boot-screen">
       <div className="boot-inner">
         <img src="/logo192.png" alt="ChessWar" className="boot-logo" style={{width:80,height:80,borderRadius:18,marginBottom:16}} />
@@ -185,12 +156,12 @@ export default function App() {
         <Navbar />
         <main className="app-main">
           <Routes>
-            <Route path="/"             element={<Dashboard />} />
-            <Route path="/play/:mode"   element={<GamePage />} />
-            <Route path="/tournament"   element={<TournamentPage />} />
-            <Route path="/leaderboard"  element={<LeaderboardPage />} />
-            <Route path="/profile"      element={<ProfilePage />} />
-            <Route path="*"             element={<Navigate to="/" replace />} />
+            <Route path="/"            element={<Dashboard />} />
+            <Route path="/play/:mode"  element={<GamePage />} />
+            <Route path="/tournament"  element={<TournamentPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/profile"     element={<ProfilePage />} />
+            <Route path="*"            element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

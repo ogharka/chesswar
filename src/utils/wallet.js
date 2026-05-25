@@ -17,8 +17,6 @@ export const USDC_ADDRESS = {
 
 export const PLATFORM_ADDRESS = process.env.REACT_APP_VAULT_ADDRESS || '0x0000000000000000000000000000000000000001';
 
-const BUILDER_CODE = "0x07626173656170700080218021802180218021802180218021";
-
 export const USDC_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function decimals() view returns (uint8)',
@@ -28,14 +26,10 @@ export const USDC_ABI = [
   'function symbol() view returns (string)',
 ];
 
-// True only inside Farcaster frame
 export function isFarcaster() {
-  try {
-    return window.self !== window.top;
-  } catch { return false; }
+  try { return window.self !== window.top; } catch { return false; }
 }
 
-// True inside Coinbase/Base App
 export function isBaseApp() {
   try {
     return !!(window.ethereum?.isCoinbaseWallet) ||
@@ -44,23 +38,21 @@ export function isBaseApp() {
 }
 
 export async function connectWallet() {
-  // ── Base App (Coinbase Wallet) ─────────────────────────────────────────
+  // ── Base App ───────────────────────────────────────────────────────────
   if (isBaseApp()) {
     const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send('eth_requestAccounts', []);
     try {
       await provider.send('wallet_switchEthereumChain', [{ chainId: TARGET.chainId }]);
     } catch (e) {
-      if (e.code === 4902) {
-        await provider.send('wallet_addEthereumChain', [TARGET]);
-      }
+      if (e.code === 4902) await provider.send('wallet_addEthereumChain', [TARGET]);
     }
     const signer = await provider.getSigner();
     const address = await signer.getAddress();
     return { provider, signer, address };
   }
 
-  // ── Farcaster Mini App ─────────────────────────────────────────────────
+  // ── Farcaster ──────────────────────────────────────────────────────────
   if (isFarcaster()) {
     try {
       const { sdk } = await import('@farcaster/frame-sdk');
@@ -72,9 +64,7 @@ export async function connectWallet() {
       try {
         await provider.send('wallet_switchEthereumChain', [{ chainId: TARGET.chainId }]);
       } catch (e) {
-        if (e.code === 4902) {
-          await provider.send('wallet_addEthereumChain', [TARGET]);
-        }
+        if (e.code === 4902) await provider.send('wallet_addEthereumChain', [TARGET]);
       }
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
@@ -84,7 +74,7 @@ export async function connectWallet() {
     }
   }
 
-  // ── Regular browser (MetaMask / Coinbase Extension) ────────────────────
+  // ── Regular browser ────────────────────────────────────────────────────
   if (!window.ethereum) throw new Error('No wallet found. Please install MetaMask.');
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   try {
@@ -139,10 +129,10 @@ export async function depositUSDC(amount, signer, provider) {
   }
   const allowance = await usdc.allowance(address, vaultAddr);
   if (allowance < amountWei) {
-    const approveTx = await usdc.approve(vaultAddr, amountWei, { data: BUILDER_CODE });
+    const approveTx = await usdc.approve(vaultAddr, amountWei);
     await approveTx.wait();
   }
-  const tx = await vault.deposit(amountWei, { data: BUILDER_CODE });
+  const tx = await vault.deposit(amountWei);
   const receipt = await tx.wait();
   return receipt;
 }
@@ -155,7 +145,7 @@ export async function withdrawUSDC(amount, toAddress, signer) {
   const decimals = await usdc.decimals();
   const amountWei = ethers.parseUnits(amount.toString(), decimals);
   const address = await signer.getAddress();
-  const tx = await vault.withdraw(amountWei, address, { data: BUILDER_CODE });
+  const tx = await vault.withdraw(amountWei, address);
   const receipt = await tx.wait();
   return receipt;
 }

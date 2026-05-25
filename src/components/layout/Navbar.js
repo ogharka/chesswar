@@ -54,12 +54,10 @@ export default function Navbar() {
     if (!wallet?.address) return;
     const load = async () => {
       try {
-        // Fetch in-app balance from server
         const res = await fetch(`https://ws.chesswar.xyz/balance/${wallet.address}`);
         const data = await res.json();
         setUsdcBal(parseFloat(data.usdc_balance || 0).toFixed(2));
       } catch {
-        // Fallback to blockchain balance
         try {
           const provider = new ethers.BrowserProvider(window.ethereum);
           const contract = new ethers.Contract(USDC_ADDR, USDC_ABI, provider);
@@ -69,10 +67,17 @@ export default function Navbar() {
       }
     };
     load();
-    // Refresh every 30 seconds
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, [wallet?.address]);
+
+  const handleDisconnect = () => {
+    try { localStorage.setItem('cw_just_disconnected', '1'); } catch {}
+    try { localStorage.removeItem('cw_token'); } catch {}
+    disconnect();
+    setShowDisconnect(false);
+    window.location.href = '/';
+  };
 
   const path = location.pathname;
   const tabs = [
@@ -86,7 +91,7 @@ export default function Navbar() {
     <>
       <div className="top-bar">
         <div className="tb-brand">
-          <div className="tb-logo">♟</div>
+          <img src="/logo192.png" alt="ChessWar" style={{width:28,height:28,borderRadius:6,marginRight:6}} />
           <span className="tb-name">ChessWar</span>
         </div>
         <div className="tb-right">
@@ -110,7 +115,7 @@ export default function Navbar() {
                   <button onClick={() => { setShowWallet(true); setShowDisconnect(false); }}>
                     Deposit / Withdraw
                   </button>
-                  <button className="tb-disconnect-btn" onClick={() => { localStorage.setItem("cw_just_disconnected","1"); disconnect(); window.location.href = "/"; }}>
+                  <button className="tb-disconnect-btn" onClick={handleDisconnect}>
                     Disconnect
                   </button>
                 </div>

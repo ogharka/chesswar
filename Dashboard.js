@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import toast from 'react-hot-toast';
@@ -18,13 +18,25 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { points, nftBoost, profile, gameHistory } = useStore();
 
-  const [selTime,    setSelTime]    = useState(5);
-  const [mode,       setMode]       = useState('bot'); // bot | bet | pvp | pvp-free
-  const [betAmt,     setBetAmt]     = useState('0.10');
-  const [searching,  setSearching]  = useState(false);
+  const [selTime,   setSelTime]   = useState(5);
+  const [mode,      setMode]      = useState('bot');
+  const [betAmt,    setBetAmt]    = useState('0.10');
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef(null);
 
   const winRate = profile.gamesPlayed
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
+
+  // Auto-cancel search after 60 seconds
+  useEffect(() => {
+    if (searching) {
+      searchTimer.current = setTimeout(() => {
+        setSearching(false);
+        toast('No opponent found. Try again!', { icon: '⏱' });
+      }, 60000);
+    }
+    return () => clearTimeout(searchTimer.current);
+  }, [searching]);
 
   const handlePlay = () => {
     if (mode === 'pvp-match' || mode === 'pvp-friend' || mode === 'pvp-free') {
@@ -32,6 +44,12 @@ export default function Dashboard() {
       return;
     }
     navigate(`/play/${mode}`, { state: { timeControl: selTime, betAmount: betAmt } });
+  };
+
+  const handleCancel = () => {
+    clearTimeout(searchTimer.current);
+    setSearching(false);
+    toast('Search cancelled', { icon: '✕' });
   };
 
   const recent = gameHistory.slice(0, 8);
@@ -73,9 +91,10 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="mc-title">Play Online</div>
-            <div className="mc-sub">Free PvP · coming soon</div>
+            <div className="mc-sub">Free matchmaking</div>
             <span className="mc-tag" style={{background:'#F5F3FF',color:'var(--purple)'}}>Free</span>
           </div>
+
           <div
             className={`mode-card bot ${mode === 'bot' ? 'active' : ''}`}
             onClick={() => setMode('bot')}
@@ -93,6 +112,7 @@ export default function Dashboard() {
             <div className="mc-sub">Practice & improve</div>
             <span className="mc-tag green">Free</span>
           </div>
+
           <div
             className={`mode-card bet ${mode === 'bet' ? 'active' : ''}`}
             onClick={() => setMode('bet')}
@@ -110,23 +130,6 @@ export default function Dashboard() {
           </div>
 
           <div
-            className={`mode-card ${mode === 'pvp-match' ? 'active' : ''}`}
-            onClick={() => setMode('pvp-match')}
-            style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
-          >
-            <div className="mc-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </div>
-            <div className="mc-title" style={{color:'var(--t3)'}}>Play Online</div>
-            <div className="mc-sub" style={{color:'var(--t3)'}}>Match with players</div>
-            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
-          </div>
-
-          <div
             className={`mode-card ${mode === 'pvp-friend' ? 'active' : ''}`}
             onClick={() => setMode('pvp-friend')}
             style={{opacity:.7, cursor:'default', borderStyle:'dashed'}}
@@ -139,12 +142,12 @@ export default function Dashboard() {
             </div>
             <div className="mc-title" style={{color:'var(--t3)'}}>Play with Friend</div>
             <div className="mc-sub" style={{color:'var(--t3)'}}>Share invite link</div>
-            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Coming Soon</span>
+            <span className="mc-tag" style={{background:'var(--raised)',color:'var(--t3)'}}>Invite</span>
           </div>
         </div>
       </div>
 
-      {/* Bet amount (only for bet mode) */}
+      {/* Bet amount */}
       {mode === 'bet' && (
         <div className="bet-row">
           <span className="bet-label">Wager</span>
@@ -181,18 +184,17 @@ export default function Dashboard() {
               className={`time-card ${selTime === t.val ? 'active' : ''}`}
               onClick={() => setSelTime(t.val)}
             >
-              <div className={`tc-time ${selTime === t.val ? 'active' : ''}`}>{t.val}</div>
+              <div className={`tc-time ${selTime === t.val ? 'active' : ''}`}>{t.val}<span style={{fontSize:11}}>m</span></div>
               <div className="tc-label">{t.type}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Play button */}
+      {/* Play / Cancel button */}
       <button
         className={`find-btn ${searching ? 'searching' : ''}`}
-        onClick={handlePlay}
-        disabled={searching}
+        onClick={searching ? handleCancel : handlePlay}
       >
         {searching ? (
           <>
@@ -210,6 +212,27 @@ export default function Dashboard() {
           </>
         )}
       </button>
+
+      {/* Cancel button shown separately when searching */}
+      {searching && (
+        <button
+          onClick={handleCancel}
+          style={{
+            width: '100%',
+            padding: '14px',
+            marginTop: '8px',
+            background: 'transparent',
+            border: '1.5px solid var(--border)',
+            borderRadius: '14px',
+            fontSize: '15px',
+            fontWeight: '600',
+            color: 'var(--t2)',
+            cursor: 'pointer',
+          }}
+        >
+          ✕ Cancel Search
+        </button>
+      )}
 
       {/* Recent battles */}
       {recent.length > 0 && (

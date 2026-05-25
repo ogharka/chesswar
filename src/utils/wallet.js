@@ -28,11 +28,39 @@ export const USDC_ABI = [
   'function symbol() view returns (string)',
 ];
 
+// True only inside Farcaster frame
 export function isFarcaster() {
-  return window.self !== window.top || !!window?.ReactNativeWebView;
+  try {
+    return window.self !== window.top;
+  } catch { return false; }
+}
+
+// True inside Coinbase/Base App
+export function isBaseApp() {
+  try {
+    return !!(window.ethereum?.isCoinbaseWallet) ||
+           navigator.userAgent.includes('CoinbaseWallet');
+  } catch { return false; }
 }
 
 export async function connectWallet() {
+  // ── Base App (Coinbase Wallet) ─────────────────────────────────────────
+  if (isBaseApp()) {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    try {
+      await provider.send('wallet_switchEthereumChain', [{ chainId: TARGET.chainId }]);
+    } catch (e) {
+      if (e.code === 4902) {
+        await provider.send('wallet_addEthereumChain', [TARGET]);
+      }
+    }
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    return { provider, signer, address };
+  }
+
+  // ── Farcaster Mini App ─────────────────────────────────────────────────
   if (isFarcaster()) {
     try {
       const { sdk } = await import('@farcaster/frame-sdk');
@@ -56,6 +84,7 @@ export async function connectWallet() {
     }
   }
 
+  // ── Regular browser (MetaMask / Coinbase Extension) ────────────────────
   if (!window.ethereum) throw new Error('No wallet found. Please install MetaMask.');
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   try {

@@ -1,9 +1,8 @@
-const API_URL = process.env.REACT_APP_API_URL || 'https://chesswar-api.railway.app';
+const API_URL = 'https://ws.chesswar.xyz';
 
-// ── Auth token management ─────────────────────────────────────────────────────
-function getToken()          { return localStorage.getItem('cw_token'); }
-function setToken(t)         { localStorage.setItem('cw_token', t); }
-function clearToken()        { localStorage.removeItem('cw_token'); }
+function getToken()  { try { return localStorage.getItem('cw_token'); } catch { return null; } }
+function setToken(t) { try { localStorage.setItem('cw_token', t); } catch {} }
+function clearToken(){ try { localStorage.removeItem('cw_token'); } catch {} }
 
 function headers() {
   const token = getToken();
@@ -14,50 +13,45 @@ function headers() {
 }
 
 async function api(method, path, body) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: headers(),
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'API error');
-  }
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: headers(),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
 }
 
-// ── Login with wallet signature ───────────────────────────────────────────────
+// Only sign if no valid token exists
 export async function loginWithWallet(signer) {
-  const address = await signer.getAddress();
-  const message = `ChessWar login\nAddress: ${address}\nTimestamp: ${Date.now()}`;
-  const signature = await signer.signMessage(message);
-  const { token, user } = await api('POST', '/api/users/auth', { address, signature, message });
-  setToken(token);
-  return user;
+  try {
+    // If token already exists skip signing
+    const existing = getToken();
+    if (existing) return null;
+
+    const address = await signer.getAddress();
+    const message = `ChessWar login\nAddress: ${address}\nTimestamp: ${Date.now()}`;
+    const signature = await signer.signMessage(message);
+    setToken(`${address}_${signature.slice(0, 20)}`);
+    return null;
+  } catch { return null; }
 }
 
 export function logout() { clearToken(); }
 
-// ── User profile ──────────────────────────────────────────────────────────────
-export const getProfile      = (addr)    => api('GET',  `/api/users/${addr}`);
-export const updateProfile   = (data)    => api('PUT',  '/api/users/profile', data);
-export const getLeaderboard  = ()        => api('GET',  '/api/users/leaderboard/top');
-export const claimReferral   = (code)    => api('POST', '/api/users/referral/claim', { referralCode: code });
-
-// ── Points ────────────────────────────────────────────────────────────────────
-export const addPoints       = (data)    => api('POST', '/api/points/add', data);
-export const getPointsHistory= ()        => api('GET',  '/api/points/history');
-export const updateNFTBoost  = (boost)   => api('POST', '/api/points/nft-boost', { boost });
-
-// ── Games ─────────────────────────────────────────────────────────────────────
-export const getGameHistory  = ()        => api('GET',  '/api/games/history');
-export const getGame         = (id)      => api('GET',  `/api/games/${id}`);
-
-// ── NFT ───────────────────────────────────────────────────────────────────────
-export const syncNFTBoost    = ()        => api('POST', '/api/nft/sync');
-export const getNFTInfo      = (addr)    => api('GET',  `/api/nft/${addr}`);
-
-// ── Airdrop ───────────────────────────────────────────────────────────────────
-export const getAirdropProof = (addr)    => api('GET',  `/api/airdrop/proof/${addr}`);
-export const markAirdropClaimed = ()     => api('POST', '/api/airdrop/claimed');
-export const getAirdropStats = ()        => api('GET',  '/api/airdrop/stats');
+export const getProfile      = (addr) => api('GET',  `/user/${addr}`);
+export const updateProfile   = (data) => api('PUT',  '/profile', data);
+export const getLeaderboard  = ()     => api('GET',  '/leaderboard');
+export const claimReferral   = (code) => api('POST', '/referral/claim', { referralCode: code });
+export const addPoints       = (data) => api('POST', '/points/add', data);
+export const getPointsHistory= ()     => api('GET',  '/points/history');
+export const updateNFTBoost  = (boost)=> api('POST', '/points/nft-boost', { boost });
+export const getGameHistory  = ()     => api('GET',  '/games/history');
+export const getGame         = (id)   => api('GET',  `/games/${id}`);
+export const syncNFTBoost    = ()     => api('POST', '/nft/sync');
+export const getNFTInfo      = (addr) => api('GET',  `/nft/${addr}`);
+export const getAirdropProof = (addr) => api('GET',  `/airdrop/proof/${addr}`);
+export const markAirdropClaimed = ()  => api('POST', '/airdrop/claimed');
+export const getAirdropStats = ()     => api('GET',  '/airdrop/stats');

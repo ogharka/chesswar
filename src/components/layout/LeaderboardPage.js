@@ -1,28 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { getLeaderboard } from '../../utils/api';
 
 export default function LeaderboardPage() {
   const { wallet, profile, points, nftBoost } = useStore();
   const [leaders, setLeaders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('https://ws.chesswar.xyz/leaderboard')
       .then(r => r.json())
-      .then(data => setLeaders(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  }, []);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getLeaderboard()
       .then(data => setLeaders(Array.isArray(data) ? data : []))
       .catch(() => setLeaders([]))
       .finally(() => setLoading(false));
   }, []);
 
   const myRank = leaders.findIndex(l => l.address === wallet?.address?.toLowerCase()) + 1;
-
   const medals = ['🥇', '🥈', '🥉'];
 
   return (
@@ -60,11 +52,13 @@ export default function LeaderboardPage() {
               <div className="lb-av">{l.username ? l.username[0].toUpperCase() : '?'}</div>
               <div className="lb-info">
                 <div className="lb-name">{l.username || `${l.address.slice(0,6)}...`}</div>
-                <div className="lb-sub">{l.gamesPlayed || 0} battles · {l.gamesWon || 0} wins</div>
+                <div className="lb-sub">
+                  {l.games_played || l.gamesPlayed || 0} battles · {l.wins || l.gamesWon || 0} wins
+                </div>
               </div>
               <div>
                 <div className="lb-pts">{(l.points || 0).toLocaleString()}</div>
-                <div className="lb-boost">{l.nftBoost || 1}× boost</div>
+                <div className="lb-boost">{l.nft_boost || l.nftBoost || 1}× boost</div>
               </div>
             </div>
           ))}

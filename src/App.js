@@ -165,10 +165,10 @@ export default function App() {
     }
   }, [wallet, profile.username]); // eslint-disable-line
 
-  if (booting) return (
+ if (booting) return (
     <div className="boot-screen">
       <div className="boot-inner">
-        <div className="boot-logo">♟</div>
+        <img src="/logo192.png" alt="ChessWar" className="boot-logo" style={{width:80,height:80,borderRadius:18,marginBottom:16}} />
         <h1>ChessWar</h1>
         <p>Dominate. Earn. Conquer.</p>
         <div className="boot-bar"><div className="boot-fill" /></div>
